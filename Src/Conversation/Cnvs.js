@@ -184,7 +184,7 @@ router.post('/:cnvId/Msgs', function (req, res) {
    async.waterfall([
       function (cb) {
          if (vld.check(body.content.length <= 5000, Tags.badValue, ["content"], cb))
-            cnn.chkQry('insert into Message set cnvId = ?, prsId = ?, whenMade = ? , content = ?',
+            cnn.chkQry('insert into Message set cnvId = ?, prsId = ?, whenMade = ? , content = ?, numLikes = 0',
                [cnvId, ssn.prsId, time, body.content], cb)
       },
       function (result, field, cb) {

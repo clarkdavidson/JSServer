@@ -19,18 +19,15 @@ router.get('/:msgId', function (req, res) {
         },
         function (msgArr, fields, cb) {
             if (vld.check(msgArr.length, Tags.notFound, null, cb)) {
-                console.log(JSON.stringify(msgArr));
                 msgArr[0].whenMade = msgArr[0].whenMade.getTime();
-                console.log(msgArr);
-
                 res.json(msgArr[0]).end();
+                cb();
             }
-            cb();
         }],
         function (err) {
             console.log("Connection Is Released");
             req.cnn.release();
-        }); 
+        });
 });
 
 router.post('/:msgId/Likes', function (req, res) {
@@ -38,21 +35,55 @@ router.post('/:msgId/Likes', function (req, res) {
     var msgId = req.params.msgId;
     var cnn = req.cnn;
 
+    var owners = Session.getAllIds().forEach(id => {
+        ssn = Session.findById(id);
+    });
+
     async.waterfall([
         function (cb) {
             cnn.chkQry('select * from Message where id = ?', [msgId], cb);
         },
         function (existingMsg, fields, cb) {
-            if (vld.check(existingMsg.length, Tags.notFound, null, cb))
-                cnn.chkQry('insert into Message set numLikes = numLikes + 1 Where id = ?'[msgId], cb);
+            if (vld.check(existingMsg.length, Tags.notFound, null, cb)) {
+                cnn.chkQry("select * from Likes where msgId = ? && prsId = ?", [msgId, ssn.prsId], cb)
+            }
+            console.log("Second Statement Done");
         },
-        function (result, field, cb) {
+        function (existingLike, field, cb) {
+            if (vld.check(!existingLike.length, null, null, cb)) {
+                cnn.chkQry('Insert Into Likes set prsId = ?, msgId = ?', [ssn.prsId, msgId], cb)
+            }
+        },
+        function (result, fields, cb) {
+            cnn.chkQry('UPDATE Message set numLikes = numLikes + 1 where id = ?', [msgId], cb);
             res.location(router.baseURL + '/' + result.insertId).end();
         }],
         function (err) {
             cnn.release();
-        })
+        }
+    )
 });
+
+router.get('/:msgId/Likes', function (req, res) {
+    var vld = req.validator;
+    var msgId = req.params.msgId;
+    var cnn = req.cnn;
+
+    var num = parseInt(req.query.num);
+
+    var handler = function (err, prsArr, fields) {
+        res.json(prsArr);
+        req.cnn.release();
+    }
+
+    if (num) {
+        req.cnn.chkQry("Select L.id, P.firstName, P.LastName from Likes L Inner Join Person P ON L.prsId = P.id where msgId = ? Limit ?",
+            [msgId, num], handler);
+    } else{
+        req.cnn.chkQry("Select L.id, P.firstName, P.LastName from Likes L Inner Join Person P ON L.prsId = P.id where msgId = ?",
+            [msgId, num], handler)
+    };
+})
 
 
 module.exports = router;
