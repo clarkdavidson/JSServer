@@ -133,7 +133,7 @@ router.get('/', function (req, res) {
       for (i = 0; i < prsArr.length; i++) {
          delete prsArr[i].password;
       }
-      res.json(prsArr[0]);
+      res.json(prsArr);
       //Assuming a connection is already there
       req.cnn.release();
    };
