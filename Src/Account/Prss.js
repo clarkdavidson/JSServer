@@ -2,8 +2,6 @@ var Express = require('express');
 var Tags = require('../Validator.js').Tags;
 var async = require('async');
 var mysql = require('mysql');
-var { Session, router } = require('../Session.js');
-
 
 var router = Express.Router({ caseSensitive: true });
 
@@ -118,86 +116,47 @@ router.post('/', function(req, res) {
 // Much nicer versions
 
 
-
-// router.get('/', function (req, res) {
-   // var vld = req.validator;
-   // var admin = req.session && req.session.isAdmin();
-   // var cnn = req.cnn;
-
-   // var owners = Session.getAllIds().forEach(id => {
-   //    ssn = Session.findById(id);
-   // });
-
-//    var email = req.query.email;
-
-//    async.waterfall([
-//       function (cb) {
-//          if (vld.checkPrsOK(ssn.prsId, cb) && email) {
-//             cnn.chkQry('select email,id from person where email LIKE ?', [email]);
-//          } else if (req.session.isAdmin && !email) {
-//             cnn.chkQry('Select email, id from person', null, cb);
-//          } else if (!vld.checkPrsOK(ssn.prsId, cb))
-//             cnn.chkQry('select * from person where id = null', null, cb)
-//       },
-//       function (prsArr, fields, cb) {
-//          vld.check(prsArr.length, Tags.notFound, null, cb)
-//          cb();
-//       }],
-//       function (err) {
-//          if (!err, prsArr) {
-
-//          }
-//       }
-//    )
-// })
-
 //Remove Password from this return value!
 router.get('/', function (req, res) {
-   var vld = req.validator;
-   var admin = req.session && req.session.isAdmin();
-   var cnn = req.cnn;
-
-   var owners = Session.getAllIds().forEach(id => {
-      ssn = Session.findById(id);
-   });
-
-
    console.log("Query Email = " + req.query.email);
    console.log("Session Email = " + req.session.email);
    console.log("Is Person A Admin " + req.session.isAdmin());
    var email = req.query.email;
+
    console.log(req.query.email);
    console.log("First Test = " + req.session.isAdmin() && req.query.email);
    console.log("Second Test = " + !req.session.isAdmin() && req.query.email);
 
 
    var handler = function (err, prsArr, fields) {
-      if (!err) {
-         for (i = 0; i < prsArr.length; i++) {
-            delete prsArr[i].password;
-         }
-         res.json(prsArr);
-         //Assuming a connection is already there
-         req.cnn.release();
-      } else {
-         res.json([]);
-         req.cnn.release();
+      for (i = 0; i < prsArr.length; i++) {
+         delete prsArr[i].password;
       }
-
+      res.json(prsArr);
+      //Assuming a connection is already there
+      req.cnn.release();
    };
 
    console.log("Value of Email : " + email)
 
-   if (email && vld.checkPrsOK(ssn.prsId, handler)) {
+   if (email && req.session.isAdmin()) {
+      console.log('1');
       //Using Handler as a Callback
       email += "%";
       req.cnn.chkQry("select id, email from Person where email LIKE ? ", [email],
          handler);
    }
-   else if (!email && req.session.isAdmin()) {
+   else if (req.session.isAdmin() && !email) {
+      console.log('2');
       req.cnn.chkQry('select id, email from Person', null, handler);
-   } else
-      req.cnn.chkQry('select id, email from Person where email = ?', [req.session.email], handler);
+   }
+   else if (!req.session.isAdmin() && (req.session.email.includes(email) || !email)) {
+      console.log('3');
+      req.cnn.chkQry('select id,email from person where email = ?', [req.session.email], handler);
+   } else if (!req.session.isAdmin() && !req.session.email.includes(email)) {
+      req.cnn.chkQry('select id, email from person where email = null', null, handler);
+   }
+
 });
 
 router.post('/', function (req, res) {

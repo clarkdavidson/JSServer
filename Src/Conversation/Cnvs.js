@@ -162,10 +162,10 @@ router.get('/:cnvId/Msgs', function (req, res) {
 
    if (num) {
       console.log("Made It Here");
-      cnn.chkQry(' Select M.id, P.email, M.content, M.whenMade From Message M Inner Join Person P ON M.prsId = P.id LIMIT ?'
+      cnn.chkQry(' Select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id LIMIT ?'
       , [parseInt(num)], handler)
    } else if (dateTime) {
-      cnn.chkQry('select * from Message where whenMade >=  ? ', [checkDate], handler)
+      cnn.chkQry('select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where whenMade >=  ? ', [checkDate], handler)
    }
 });
 
