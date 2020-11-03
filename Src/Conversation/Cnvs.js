@@ -152,21 +152,47 @@ router.get('/:cnvId/Msgs', function (req, res) {
 
    var num = req.query.num || null;
 
-   console.log(dateTime);
-   console.log(typeof checkDate);
+   console.log(cnvId);
 
-   var handler = function (err, prsArr, fields) {
-      res.json(prsArr);
-      req.cnn.release();
-   };
 
-   if (num) {
-      console.log("Made It Here");
-      cnn.chkQry(' Select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id LIMIT ?'
-      , [parseInt(num)], handler)
-   } else if (dateTime) {
-      cnn.chkQry('select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where whenMade >=  ? ', [checkDate], handler)
-   }
+
+
+   async.waterfall([
+      function (cb) {
+         cnn.chkQry('Select * from Conversation where id = ?', [cnvId], cb)
+      },
+      function (exisitingCnv, fields, cb) {
+         if (vld.check(exisitingCnv.length, Tags.notFound, null, cb)) {
+            if (num) {
+               cnn.chkQry(' Select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where M.cnvId = ? ORDER BY M.whenMade LIMIT ?'
+                  , [cnvId, parseInt(num)], cb);
+            }
+            else if (dateTime) {
+               cnn.chkQry('select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where whenMade >=  ? ORDER BY M.whenMade', [checkDate], cb)
+            }
+         }
+      }],
+      function (err, result, fields) {
+         if (!err) {
+            res.json(result);
+         }
+         cnn.release();
+      }
+   )
+
+   // var handler = function (err, prsArr, fields) {
+   //    res.json(prsArr);
+   //    req.cnn.release();
+   // };
+
+   // if (num) {
+   //    console.log("Made It Here");
+   //    cnn.chkQry(' Select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where cnvId = ? LIMIT ?'
+   //       , [cnvId, parseInt(num)], handler)
+   // } else if (dateTime) {
+   //    console.log("Made it here 2");
+   //    cnn.chkQry('select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where whenMade >=  ? ', [checkDate], handler)
+   // }
 });
 
 router.post('/:cnvId/Msgs', function (req, res) {

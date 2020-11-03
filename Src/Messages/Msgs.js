@@ -77,10 +77,10 @@ router.get('/:msgId/Likes', function (req, res) {
     }
 
     if (num) {
-        req.cnn.chkQry("Select L.id, P.firstName, P.LastName from Likes L Inner Join Person P ON L.prsId = P.id where msgId = ? Limit ?",
+        req.cnn.chkQry("Select L.id, P.firstName, P.lastName from Likes L Inner Join Person P ON L.prsId = P.id where msgId = ? ORDER BY P.lastName Limit ?",
             [msgId, num], handler);
-    } else{
-        req.cnn.chkQry("Select L.id, P.firstName, P.LastName from Likes L Inner Join Person P ON L.prsId = P.id where msgId = ?",
+    } else {
+        req.cnn.chkQry("Select L.id, P.firstName, P.lastName from Likes L Inner Join Person P ON L.prsId = P.id where msgId = ? ORDER BY P.lastName",
             [msgId, num], handler)
     };
 })

@@ -187,7 +187,8 @@ router.post('/', function (req, res) {
          }
       },
       function (existingPrss, fields, cb) {  // If no duplicates, insert new Person
-         if (vld.check(!existingPrss.length, Tags.dupEmail, null, cb)) {
+         if (vld.check(!existingPrss.length, Tags.dupEmail, null, cb) &&
+            vld.check(body.role !== null || body.role !== "", Tags.missingField, ["role"], cb)) {
             body.termsAccepted = body.termsAccepted && new Date();
             cnn.chkQry('insert into Person set ?', body, cb);
          }

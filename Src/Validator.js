@@ -91,7 +91,7 @@ Validator.prototype.checkPrsOK = function (prsId, cb) {
    return result;
 };
 
-Validator.prototype.checkFieldLength = function(body, cb){
+Validator.prototype.checkFieldLength = function (body, cb) {
    if (body.password) {
       console.log(body.password <= 50);
       return (this.check(body.password <= 50),
@@ -106,16 +106,6 @@ Validator.prototype.hasFields = function (obj, fieldList, cb) {
    fieldList.forEach(function (name) {
       self.chain(obj.hasOwnProperty(name), Validator.Tags.missingField, [name]);
    });
-
-   // console.log(Object.values(obj));
-   // values = Object.values(obj)
-   // start = 0;
-   // values.forEach(function(start){
-   //    self.chain(values[start] !== null || values[start] !== "")
-   // }, Validator.Tags.missingField, ["stuff"]);
-   // console.log(obj.roll);
-   // console.log(obj.roll !== null && obj.roll !== undefined);
-
    return this.check(true, null, null, cb);
 };
 
