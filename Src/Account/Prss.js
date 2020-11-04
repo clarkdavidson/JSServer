@@ -2,6 +2,7 @@ var Express = require('express');
 var Tags = require('../Validator.js').Tags;
 var async = require('async');
 var mysql = require('mysql');
+const { Session } = require('../Session.js');
 
 var router = Express.Router({ caseSensitive: true });
 
@@ -295,22 +296,26 @@ router.get('/:id', function(req, res) {
 */
 
 
-// ________________________________//
+//________________________________//
 //  Connection Not being Released \\
 router.delete('/:id', function (req, res) {
    var vld = req.validator;
+   var userId = req.params.id;
+   console.log(userId);
+
+   Session.deletedUser(userId);
 
    async.waterfall([
       function (cb) {
          if (vld.checkAdmin(cb)) {
-            console.log("Admin Check Cleared");
-            console.log(vld.checkAdmin());
+            //console.log("Admin Check Cleared");
+            //console.log(vld.checkAdmin());
             req.cnn.chkQry('DELETE from Person where id = ?', [req.params.id], cb);
          }
       },
       function (result, fields, cb) {
          if (vld.check(result.affectedRows, Tags.notFound, null, cb)) {
-            console.log("Person Deleted");
+            //console.log("Person Deleted");
             res.end();
             cb();
          }

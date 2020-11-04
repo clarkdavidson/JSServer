@@ -62,84 +62,90 @@ app.use('/Msgs', require('./Messages/Msgs.js'));
 // Special debugging route for /DB DELETE.  Clears all table contents,
 //resets all auto_increment keys to start at 1, and reinserts one admin user.
 app.delete('/DB', function (req, res) {
-   if(req.validator.check())
-   // Callbacks to clear tables
-   var cbs = ["Message", "Conversation", "Person", "Likes"].map(
-      table => function (cb) {
-         req.cnn.query("delete from " + table, cb);
-      }
-   );
-
-   // Callbacks to reset increment bases
-   cbs = cbs.concat(["Conversation", "Message", "Person", "Likes"].map(
-      table => cb => {
-         req.cnn.query("alter table " + table + " auto_increment = 1", cb);
-      }));
-
-   // Callback to reinsert admin user
-   cbs.push(cb => {
-      req.cnn.query('INSERT INTO Person (firstName, lastName, email,' +
-         ' password, whenRegistered, role) VALUES ' +
-         '("Joe", "Admin", "adm@11.com","password", NOW(), 1);', cb);
-   });
-
-   // Callback to clear sessions, release connection and return result
-   cbs.push(cb => {
-      Session.getAllIds().forEach(id => {
-         Session.findById(id).logOut();
-         console.log("Clearing " + id);
-      });
-      cb();
-   });
-
-   async.series(cbs, err => {
-      req.cnn.release();
-      if (err)
-         res.status(400).json(err);
-      else
-         res.status(200).end();
-   });
-
-   /* Equivalent expanded code for instructional reference
-      async.series([
-         function(callback){
-            cnn.query('delete from Person`', callback);
-         },
-         function(callback){
-            cnn.query('delete from Conversation', callback);
-         },
-         function(callback){
-            cnn.query('delete from Message', callback);
-         },
-         function(callback){
-            cnn.query('alter table Person auto_increment = 1', callback);
-         },
-         function(callback){
-            cnn.query('alter table Conversation auto_increment = 1', callback);
-         },
-         function(callback){
-            cnn.query('alter table Message auto_increment = 1', callback);
-         },
-         function(callback){
-            cnn.query('INSERT INTO Person (firstName, lastName, email,' +
-                ' password, whenRegistered, role) VALUES ' +
-                '("Joe", "Admin", "adm@11.com","password", NOW(), 2);',
-             callback);
-         },
-         function(callback){
-            for (var session in Session.sessions)
-               delete Session.sessions[session];
-            res.send();
+   if (req.validator.checkAdmin()) {
+      // Callbacks to clear tables
+      var cbs = ["Message", "Conversation", "Person", "Likes"].map(
+         table => function (cb) {
+            req.cnn.query("delete from " + table, cb);
          }
-      ],
-      err => {
-        req.cnn.release();
-        if (err)
-           res.status(400).json(err);
-        else
-           res.status(200).end();
-      }
-   );*/
+      );
+
+
+      // Callbacks to reset increment bases
+      cbs = cbs.concat(["Conversation", "Message", "Person", "Likes"].map(
+         table => cb => {
+            req.cnn.query("alter table " + table + " auto_increment = 1", cb);
+         }));
+
+      // Callback to reinsert admin user
+      cbs.push(cb => {
+         req.cnn.query('INSERT INTO Person (firstName, lastName, email,' +
+            ' password, whenRegistered, role) VALUES ' +
+            '("Joe", "Admin", "adm@11.com","password", NOW(), 1);', cb);
+      });
+
+      // Callback to clear sessions, release connection and return result
+      cbs.push(cb => {
+         Session.getAllIds().forEach(id => {
+            Session.findById(id).logOut();
+            console.log("Clearing " + id);
+         });
+         var test = Session.getSessionsById();
+         test.length = 0;
+         console.log(test.length);
+         cb();
+      });
+
+      async.series(cbs, err => {
+         req.cnn.release();
+         if (err)
+            res.status(400).json(err);
+         else
+            res.status(200).end();
+      });
+
+      /* Equivalent expanded code for instructional reference
+         async.series([
+            function(callback){
+               cnn.query('delete from Person`', callback);
+            },
+            function(callback){
+               cnn.query('delete from Conversation', callback);
+            },
+            function(callback){
+               cnn.query('delete from Message', callback);
+            },
+            function(callback){
+               cnn.query('alter table Person auto_increment = 1', callback);
+            },
+            function(callback){
+               cnn.query('alter table Conversation auto_increment = 1', callback);
+            },
+            function(callback){
+               cnn.query('alter table Message auto_increment = 1', callback);
+            },
+            function(callback){
+               cnn.query('INSERT INTO Person (firstName, lastName, email,' +
+                   ' password, whenRegistered, role) VALUES ' +
+                   '("Joe", "Admin", "adm@11.com","password", NOW(), 2);',
+                callback);
+            },
+            function(callback){
+               for (var session in Session.sessions)
+                  delete Session.sessions[session];
+               res.send();
+            }
+         ],
+         err => {
+           req.cnn.release();
+           if (err)
+              res.status(400).json(err);
+           else
+              res.status(200).end();
+         }
+      );*/
+   } else
+      req.cnn.release();
 });
 
 // Anchor handler for general 404 cases.

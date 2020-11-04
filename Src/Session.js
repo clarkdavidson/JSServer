@@ -1,5 +1,6 @@
 // This middleware assumes cookieParser has been "used" before this
 var crypto = require('crypto');
+const { unescapeLeadingUnderscores } = require('typescript');
 
 var ssnsByCookie = {};  // All currently logged-in Sessions indexed by token
 var ssnsById = [];      // Same, but indexed by sequential session ID
@@ -17,13 +18,13 @@ var cookieName = 'CHSAuth'; // Cookie key for authentication tokens
 // 1 Cookie is tagged by |cookieName|, times out on the client side after
 // |duration| (though the router, below, will check anyway to prevent hacking),
 // and will not be shown by the browser to the user, again to prevent hacking.
-var Session = function(user, res) {
+var Session = function (user, res) {
    var authToken = crypto.randomBytes(16).toString('hex');  // Make random token
 
-   res.cookie(cookieName, authToken, {maxAge: duration, httpOnly: true }); // 1
+   res.cookie(cookieName, authToken, { maxAge: duration, httpOnly: true }); // 1
    ssnsById.push(this);
    ssnsByCookie[authToken] = this;
-   this.id = ssnsById.length-1;
+   this.id = ssnsById.length - 1;
    this.authToken = authToken;
    this.prsId = user.id;
    this.firstName = user.firstName;
@@ -31,25 +32,43 @@ var Session = function(user, res) {
    this.email = user.email;
    this.role = user.role;
    this.loginTime = this.lastUsed = new Date().getTime();
-  // console.log(ssnsById);
+   // console.log(ssnsById);
 };
 
-Session.prototype.isAdmin = function() {
+Session.prototype.isAdmin = function () {
    return this.role === 1;
 };
 
 // Log out a user by removing this Session
-Session.prototype.logOut = function() {
+Session.prototype.logOut = function () {
    console.log(this.id);
    delete ssnsById[this.id];
    delete ssnsByCookie[this.authToken];
 };
 
-Session.getAllIds = () => Object.keys(ssnsById);
-Session.findById = id => {return ssnsById[id];}
-Session.getSessionsById = () => {return ssnsById;}
+Session.deletedUser = function (userId) {
+   console.log("USer id = " + parseInt(userId));
+   for (i = 0; i < ssnsById.length; i++) {
+      console.log("Is session undefined? " + (ssnsById[i] === undefined));
+      if (ssnsById[i] !== undefined) {
+         console.log(ssnsById[i]);
+         console.log("Person id check = " + (parseInt(ssnsById[i].prsId) === parseInt(userId)));
+      }
+      if (ssnsById[i] !== undefined && parseInt(ssnsById[i].prsId) === parseInt(userId)) {
+         console.log("________________________");
+         console.log(ssnsById[i]);
+         console.log("Are they Equal? " + ssnsById[i].prsId === parseInt(userId));
+         delete ssnsById[i];
+         delete ssnsByCookie[i.authToken];
+      }
+   }
+};
 
-Session.getCurrentSession = function(){
+Session.getAllIds = () => Object.keys(ssnsById);
+Session.findById = id => { return ssnsById[id]; }
+Session.getSessionsById = () => { return ssnsById; }
+
+Session.getCurrentSession = function () {
    console.log(this.id);
    return Session.findById(this.id);
 };
@@ -58,13 +77,13 @@ Session.getCurrentSession = function(){
 // cookies, delete the Session if it has timed out, or attach the Session to
 // |req| if it's current If |req| has an attached Session after this process,
 // then down-chain routes will treat |req| as logged-in.
-var router = function(req, res, next) {
+var router = function (req, res, next) {
    var cookie = req.cookies[cookieName];
    var session = cookie && ssnsByCookie[cookie];
-   
+
    if (session) {
       // If the session was last used more than |duration| mS ago..
-      if (session.lastUsed < new Date().getTime() - duration) 
+      if (session.lastUsed < new Date().getTime() - duration)
          session.logOut();
       else {
          req.session = session;
@@ -73,4 +92,4 @@ var router = function(req, res, next) {
    next();
 };
 
-module.exports = {Session, router};
+module.exports = { Session, router };

@@ -64,7 +64,7 @@ router.get('/:id', function (req, res) {
 
    //Added check for admin. <----------------
 
-   if ((vld.check(ssn, Tags.notFound) && vld.checkPrsOK(ssn.id)) || vld.checkAdmin()) {
+   if ((vld.check(ssn, Tags.notFound, null) && vld.checkPrsOK(ssn.id)) || vld.checkAdmin()) {
       res.json({ id: ssn.id, prsId: ssn.prsId, loginTime: ssn.loginTime });
    }
    req.cnn.release();
