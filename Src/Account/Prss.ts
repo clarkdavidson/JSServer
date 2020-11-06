@@ -1,4 +1,6 @@
 var Express = require('express');
+import { Router, Request, Response } from 'express'
+import { queryCallback } from 'mysql';
 var Tags = require('../Validator.js').Tags;
 var async = require('async');
 var mysql = require('mysql');
@@ -116,21 +118,35 @@ router.post('/', function(req, res) {
 */
 // Much nicer versions
 
+interface Person {
+   id: number;
+   firstName: String;
+   lastName: String;
+   password: String;
+   role: number;
+   termsAccepted: boolean;
+}
+
+interface Result {
+   insertId: Number
+   affectedRows: Number
+}
+
 
 //Remove Password from this return value!
-router.get('/', function (req, res) {
+router.get('/', function (req: Request, res: Response) {
    console.log("Query Email = " + req.query.email);
    console.log("Session Email = " + req.session.email);
    console.log("Is Person A Admin " + req.session.isAdmin());
-   var email = req.query.email;
+   let email = req.query.email;
 
    console.log(req.query.email);
    console.log("First Test = " + req.session.isAdmin() && req.query.email);
    console.log("Second Test = " + !req.session.isAdmin() && req.query.email);
 
 
-   var handler = function (err, prsArr, fields) {
-      for (i = 0; i < prsArr.length; i++) {
+   var handler = function (err: Error, prsArr: Person[], fields: any) {
+      for (let i = 0; i < prsArr.length; i++) {
          delete prsArr[i].password;
       }
       res.json(prsArr);
@@ -151,16 +167,16 @@ router.get('/', function (req, res) {
       console.log('2');
       req.cnn.chkQry('select id, email from Person', null, handler);
    }
-   else if (!req.session.isAdmin() && (req.session.email.includes(email) || !email)) {
+   else if (!req.session.isAdmin() && (req.session.email.includes(email as string) || !email)) {
       console.log('3');
       req.cnn.chkQry('select id,email from person where email = ?', [req.session.email], handler);
-   } else if (!req.session.isAdmin() && !req.session.email.includes(email)) {
+   } else if (!req.session.isAdmin() && !req.session.email.includes(email as string)) {
       req.cnn.chkQry('select id, email from person where email = null', null, handler);
    }
 
 });
 
-router.post('/', function (req, res) {
+router.post('/', function (req: Request, res: Response) {
    var vld = req.validator;  // Shorthands
    var body = req.body; // Request Body
    var admin = req.session && req.session.isAdmin(); //Check for Admin
@@ -171,7 +187,7 @@ router.post('/', function (req, res) {
    body.whenRegistered = new Date();
 
    async.waterfall([
-      function (cb) { // Check properties and search for Email duplicates
+      function (cb: queryCallback) { // Check properties and search for Email duplicates
          if (vld.hasFields(body, ["email", "password", "role"], cb) &&
             vld.chain(body.role === 0 || admin, Tags.forbiddenRole, null)
                //.chain(body.roll !== null || body.roll !== "", Tags.missingField, ['role'])
@@ -187,25 +203,25 @@ router.post('/', function (req, res) {
             cnn.chkQry('select * from Person where email = ?', body.email, cb)
          }
       },
-      function (existingPrss, fields, cb) {  // If no duplicates, insert new Person
+      function (existingPrss: Person[], fields: any, cb: queryCallback) {  // If no duplicates, insert new Person
          if (vld.check(!existingPrss.length, Tags.dupEmail, null, cb) &&
             vld.check(body.role !== null || body.role !== "", Tags.missingField, ["role"], cb)) {
             body.termsAccepted = body.termsAccepted && new Date();
             cnn.chkQry('insert into Person set ?', body, cb);
          }
       },
-      function (result, fields, cb) { // Return location of inserted Person
+      function (result: Result, fields: any, cb: queryCallback) { // Return location of inserted Person
          res.location(router.baseURL + '/' + result.insertId).end();
-         cb();
+         cb(null, null, null);
       }],
-      function (err) {
+      function (err: Error) {
          cnn.release();
       });
 });
 
 
 /* Fill in this version */
-router.put('/:id', function (req, res) {
+router.put('/:id', function (req: Request, res: Response) {
    var vld = req.validator;
    var body = req.body;
    var admin = req.session.isAdmin();
@@ -213,7 +229,7 @@ router.put('/:id', function (req, res) {
 
 
    async.waterfall([
-      cb => {
+      function (cb: queryCallback) {
          if (vld.checkPrsOK(req.params.id, cb) &&
             vld.chain(!("whenRegistered" in body), Tags.forbiddenField, ["whenRegistered"])
                .chain(!("termsAccepted" in body), Tags.forbiddenField, ["termsAccepted"])
@@ -226,9 +242,9 @@ router.put('/:id', function (req, res) {
                   Tags.badValue, ["firstName"]), cb)
             cnn.chkQry('select * from Person where id = ?', [req.params.id], cb);
       },
-      (prss, fields, cb) => {
+      (prss: Person[], fields: any, cb: queryCallback) => {
          if (vld.check(prss.length, Tags.notFound, null, cb) &&
-            vld.check(admin || body.oldPassword === prss.password, Tags.oldPwdMismatch, ["Password Does not Match Old Password"], cb)) {
+            vld.check(admin || body.oldPassword === prss[0].password, Tags.oldPwdMismatch, ["Password Does not Match Old Password"], cb)) {
             delete body.id;
             delete body.oldPassword;
             if (Object.keys(body).length) {
@@ -236,16 +252,16 @@ router.put('/:id', function (req, res) {
             }
             else {
                console.log('try again');
-               cb(false, null, null);
+               cb(null, null, null);
             }
          }
 
       },
-      (updateResult, fields, cb) => {
+      (updateResult: any, fields: any, cb: any) => {
          res.status(200).end();
          cb();
       }],
-      function (err) {
+      function (err: Error) {
          console.log('You Ended up here');
          cnn.release();
       });
@@ -254,16 +270,16 @@ router.put('/:id', function (req, res) {
 
 //Remove Password from PrsArr
 
-router.get('/:id', function (req, res) {
+router.get('/:id', function (req: Request, res: Response) {
    var vld = req.validator;
 
    async.waterfall([
-      function (cb) {
+      function (cb: queryCallback) {
          if (vld.checkPrsOK(req.params.id, cb) || vld.checkAdmin())
             req.cnn.chkQry('select * from Person where id = ?', [req.params.id],
                cb);
       },
-      function (prsArr, fields, cb) {
+      function (prsArr: Person[], fields: any, cb: Function) {
          if (vld.check(prsArr.length, Tags.notFound, null, cb)) {
             console.log(prsArr[0].password);
             delete prsArr[0].password;
@@ -272,7 +288,7 @@ router.get('/:id', function (req, res) {
             cb();
          }
       }],
-      err => {
+      (err: Error) => {
          req.cnn.release();
       });
 });
@@ -298,7 +314,7 @@ router.get('/:id', function(req, res) {
 
 //________________________________//
 //  Connection Not being Released \\
-router.delete('/:id', function (req, res) {
+router.delete('/:id', function (req: Request, res: Response) {
    var vld = req.validator;
    var userId = req.params.id;
    console.log(userId);
@@ -306,21 +322,21 @@ router.delete('/:id', function (req, res) {
    Session.deletedUser(userId);
 
    async.waterfall([
-      function (cb) {
+      function (cb: queryCallback) {
          if (vld.checkAdmin(cb)) {
             //console.log("Admin Check Cleared");
             //console.log(vld.checkAdmin());
             req.cnn.chkQry('DELETE from Person where id = ?', [req.params.id], cb);
          }
       },
-      function (result, fields, cb) {
+      function (result: Result, fields: any, cb: Function) {
          if (vld.check(result.affectedRows, Tags.notFound, null, cb)) {
             //console.log("Person Deleted");
             res.end();
             cb();
          }
       }],
-      function (err) {
+      function (err: Error) {
          console.log('Connection Releaserd');
          req.cnn.release();
       });
