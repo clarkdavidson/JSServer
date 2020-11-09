@@ -1,27 +1,28 @@
 var Express = require('express');
 var Tags = require('../Validator.js').Tags;
 var { Session, router } = require('../Session.js');
+import { Router, Request, Response } from 'express'
 var router = Express.Router({ caseSensitive: true });
 
 router.baseURL = '/Ssns';
 
-router.get('/', function (req, res) {
-   var body = [], ssn;
+router.get('/', function (req: Request, res: Response) {
+   var body: { id: number; prsId: number; loginTime: Date; }[] = [], ssn;
 
    if (req.validator.checkAdmin()) {
-      Session.getAllIds().forEach(id => {
+      Session.getAllIds().forEach((id: number) => {
          ssn = Session.findById(id);
          //console.log(ssn);
          body.push({ id: ssn.id, prsId: ssn.prsId, loginTime: ssn.loginTime });
       });
       res.json(body);
       req.cnn.release();
-   }else{
+   } else {
       req.cnn.release();
    }
 });
 
-router.post('/', function (req, res) {
+router.post('/', function (req: Request, res: Response) {
    var ssn;
    var cnn = req.cnn;
 
@@ -37,7 +38,7 @@ router.post('/', function (req, res) {
       });
 });
 //Program This
-router.delete('/:id', function (req, res) {
+router.delete('/:id', function (req: Request, res: Response) {
    var vld = req.validator;
    console.log("vld set");
    console.log("Req Query ID " + req.params.id);
@@ -56,7 +57,7 @@ router.delete('/:id', function (req, res) {
    console.log("Connection Released");
 });
 
-router.get('/:id', function (req, res) {
+router.get('/:id', function (req: Request, res: Response) {
    var vld = req.validator;
    console.log(req.params.id);
    var ssn = Session.findById(req.params.id);
