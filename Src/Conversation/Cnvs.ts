@@ -16,7 +16,7 @@ router.get('/', function (req: Request, res: Response) {
    console.log(owner);
 
    if (owner) {
-      req.cnn.chkQry('select * from Conversation where ownerId = ?', owner,
+      req.cnn.chkQry('select * from Conversation where ownerId = ?', [owner],
          function (err, cnvs) {
             if (!err)
                res.json(cnvs);
@@ -33,11 +33,11 @@ router.get('/', function (req: Request, res: Response) {
    }
 });
 
-interface Conversation{
-   id:number
-   ownerId:number,
-   title:String,
-   lastMessage:Date
+interface Conversation {
+   id: number
+   ownerId: number,
+   title: String,
+   lastMessage: Date
 }
 
 interface Result {
@@ -49,8 +49,10 @@ router.post('/', function (req: Request, res: Response) {
    var vld = req.validator;
    var body = req.body;
    var cnn = req.cnn;
+
+   //Dont know if this will work?
    var owners = Session.getAllIds().forEach((id: number) => {
-      return Session.findById(id);
+      Session.findById(id);
    });
 
    console.log(owners.prsId);
@@ -63,17 +65,17 @@ router.post('/', function (req: Request, res: Response) {
             vld.check((body.title !== "" && body.title !== null), Tags.missingField, ["title"], cb))
             cnn.chkQry('select * from Conversation where title = ?', body.title, cb);
       },
-      function (existingCnv:Conversation[], fields:any, cb:queryCallback) {
+      function (existingCnv: Conversation[], fields: any, cb: queryCallback) {
          console.log(existingCnv[0]);
          if (vld.check(!existingCnv.length, Tags.dupTitle, null, cb))
             cnn.chkQry("insert into Conversation set title = ?, ownerId = ? ",
-               [body.title, ssn.prsId], cb);
+               [body.title, owners.prsId], cb);
       },
-      function (insRes:Result, fields:any, cb:queryCallback) {
+      function (insRes: Result, fields: any, cb:Function) {
          res.location(router.baseURL + '/' + insRes.insertId).end();
-         cb(null,null,null)
+         cb();
       }],
-      function (err:Error) {
+      function (err: Error) {
          cnn.release();
       });
 });
@@ -83,27 +85,27 @@ router.put('/:cnvId', function (req: Request, res: Response) {
    var body = req.body;
    var cnn = req.cnn;
    var cnvId = req.params.cnvId;
-   var owners = Session.getAllIds().forEach(id => {
-      ssn = Session.findById(id);
+   var owners = Session.getAllIds().forEach((id: number) => {
+       Session.findById(id);
    });
 
    async.waterfall([
-      function (cb:queryCallback) {
+      function (cb: queryCallback) {
          //console.log(ssn.prsId);
          if (vld.check(body.title.length <= 80, Tags.badValue, ["title"], cb))
             cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
       },
-      function (cnvs:Conversation[], fields:any, cb:queryCallback) {
+      function (cnvs: Conversation[], fields: any, cb: queryCallback) {
          //console.log(cnvs[0]);
          //console.log("Convo Length = " + cnvs.length);
          //console.log("Is Person Okay " + vld.checkPrsOK(cnvs[0].ownerId));
          if (vld.checkPrsOK(cnvs[0].ownerId, cb) &&
-            vld.check(cnvs.length, Tags.notFound, null, cb))
+            vld.check(Boolean(cnvs.length), Tags.notFound, null, cb))
             cnn.chkQry('select * from Conversation where title = ?', [body.title], cb);
       },
-      function (sameTtl:Conversation[], fields:any, cb:queryCallback) {
+      function (sameTtl: Conversation[], fields: any, cb: queryCallback) {
          // console.log("sameTtl.legth = " + sameTtl.length);
-         if (vld.check(!(sameTtl.length) || ((sameTtl[0].id === parseInt(cnvId)) && (ssn.prsId === sameTtl[0].ownerId)),
+         if (vld.check(!(sameTtl.length) || ((sameTtl[0].id === parseInt(cnvId)) && (owners.prsId === sameTtl[0].ownerId)),
             Tags.dupTitle, null, cb)) {
             cnn.chkQry("update Conversation set title = ? where id = ?",
                [body.title, cnvId], cb);
@@ -111,51 +113,51 @@ router.put('/:cnvId', function (req: Request, res: Response) {
          }
       }
    ],
-      function (err) {
+      function (err: Error) {
          cnn.release();
       });
 });
 
-router.delete('/:cnvId', function (req:Request, res:Response) {
+router.delete('/:cnvId', function (req: Request, res: Response) {
    var vld = req.validator;
    var cnvId = req.params.cnvId;
    var cnn = req.cnn;
 
    async.waterfall([
-      function (cb:queryCallback) {
+      function (cb: queryCallback) {
          cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
       },
-      function (cnvs, fields, cb) {
-         if (vld.check(cnvs.length, Tags.notFound, null, cb) &&
+      function (cnvs: Conversation[], fields: any, cb: queryCallback) {
+         if (vld.check(Boolean(cnvs.length), Tags.notFound, null, cb) &&
             vld.checkPrsOK(cnvs[0].ownerId, cb))
             cnn.chkQry('delete from Conversation where id = ?', [cnvId], cb);
          res.status(200).end();
       }],
-      function (err) {
+      function (err: Error) {
          cnn.release();
       });
 });
 
-router.get('/:cnvId', function (req:Request, res:Response) {
+router.get('/:cnvId', function (req: Request, res: Response) {
    var vld = req.validator;
    var cnvId = req.params.cnvId;
    var cnn = req.cnn;
 
    async.waterfall([
-      function (cb:queryCallback) {
-         cnn.chkQry('select * from Conversation where id = ?', cnvId, cb);
+      function (cb: queryCallback) {
+         cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
       },
-      function (cnvs, fields, cb) {
-         if (vld.check(cnvs.length, Tags.notFound, null, cb))
+      function (cnvs: Conversation[], fields: any, cb: queryCallback) {
+         if (vld.check(Boolean(cnvs.length), Tags.notFound, null, cb))
             res.json(cnvs);
-         cb()
+         cb(null)
       }],
-      function (err) {
+      function (err: Error) {
          cnn.release();
       });
 });
 
-router.get('/:cnvId/Msgs', function (req:Request, res:Response) {
+router.get('/:cnvId/Msgs', function (req: Request, res: Response) {
    var vld = req.validator;
    var cnvId = req.params.cnvId;
    var cnn = req.cnn;
@@ -172,21 +174,21 @@ router.get('/:cnvId/Msgs', function (req:Request, res:Response) {
 
 
    async.waterfall([
-      function (cb:queryCallback) {
+      function (cb: queryCallback) {
          cnn.chkQry('Select * from Conversation where id = ?', [cnvId], cb)
       },
-      function (exisitingCnv, fields, cb) {
-         if (vld.check(exisitingCnv.length, Tags.notFound, null, cb)) {
+      function (exisitingCnv: Conversation[], fields: any, cb: queryCallback) {
+         if (vld.check(Boolean(exisitingCnv.length), Tags.notFound, null, cb)) {
             if (num) {
                cnn.chkQry(' Select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where M.cnvId = ? ORDER BY M.whenMade LIMIT ?'
-                  , [cnvId, parseInt(num)], cb);
+                  , [cnvId, parseInt(num as string)], cb);
             }
             else if (dateTime) {
                cnn.chkQry('select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where whenMade >=  ? ORDER BY M.whenMade', [checkDate], cb)
             }
          }
       }],
-      function (err, result, fields) {
+      function (err: Error, result: Conversation, fields: any) {
          if (!err) {
             res.json(result);
          }
@@ -209,29 +211,29 @@ router.get('/:cnvId/Msgs', function (req:Request, res:Response) {
    // }
 });
 
-router.post('/:cnvId/Msgs', function (req:Request, res:Response) {
+router.post('/:cnvId/Msgs', function (req: Request, res: Response) {
    var vld = req.validator;
    var cnvId = req.params.cnvId;
    var cnn = req.cnn;
    var body = req.body;
    var time = new Date();
 
-   var owners = Session.getAllIds().forEach(id => {
-      ssn = Session.findById(id);
+   var owners = Session.getAllIds().forEach((id: number) => {
+     Session.findById(id);
    });
 
 
    async.waterfall([
-      function (cb:queryCallback) {
+      function (cb: queryCallback) {
          if (vld.check(body.content.length <= 5000, Tags.badValue, ["content"], cb))
             cnn.chkQry('insert into Message set cnvId = ?, prsId = ?, whenMade = ? , content = ?, numLikes = 0',
-               [cnvId, ssn.prsId, time, body.content], cb)
+               [cnvId, owners.prsId, time, body.content], cb)
       },
-      function (result, field, cb) {
+      function (result: Result, field: any, cb: queryCallback) {
          res.location(router.baseURL + '/' + result.insertId).end();
-         cb();
+         cb(null);
       }],
-      function (err) {
+      function (err: Error) {
          cnn.release()
       });
 

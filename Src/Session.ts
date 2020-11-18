@@ -1,6 +1,6 @@
 // This middleware assumes cookieParser has been "used" before this
-import {randomBytes} from 'crypto';
-import {Response, Request} from 'express';
+import { randomBytes } from 'crypto';
+import { Response, Request } from 'express';
 
 // Session-constructed objects represent an ongoing login session, including
 // user details, login time, and time of last use, the latter for the purpose
@@ -23,18 +23,20 @@ type user = {
 }
 
 export class Session {
+
    // All currently logged-in Sessions indexed by token
-   private static ssnsByCookie: {[key: string]: Session} = {}; 
-   
+   private static ssnsByCookie: { [key: string]: Session } = {};
+
    // Sessions by sequential session ID
-   private static ssnsById: Session[] = [];  
-   
+   private static ssnsById: Session[] = [];
+
    static readonly duration = 7200000;     // Two hours in milliseconds
    static readonly cookieName = 'CHSAuth'; // Cookie key for auth tokens
-   
-   static findById = (id:number|string) => Session.ssnsById[id as number];
+
+   static findById = (id: number | string) => Session.ssnsById[id as number];
    static getAllIds = () => Object.keys(Session.ssnsById);
-   
+   static getSessionsById = () =>{return Session.ssnsById};
+
    static resetAll = () => {
       Session.ssnsById = [];
       Session.ssnsByCookie = {};
@@ -52,12 +54,12 @@ export class Session {
 
    constructor(user: user, res: Response) {
       let authToken = randomBytes(16).toString('hex');  // Make random token
-      
+
       res.cookie(Session.cookieName, authToken,
-         {maxAge: Session.duration, httpOnly: true }); // 1
+         { maxAge: Session.duration, httpOnly: true }); // 1
       Session.ssnsByCookie[authToken] = this;
       Session.ssnsById.push(this);
-      
+
       this.id = Session.ssnsById.length - 1;
       this.authToken = authToken;
       this.prsId = user.id;
@@ -67,27 +69,47 @@ export class Session {
       this.role = user.role;
       this.loginTime = this.lastUsed = new Date().getTime();
    };
-   
+
    isAdmin = () => this.role === 1;
-   
+
    // Log out a user by removing this Session
    logOut() {
       delete Session.ssnsById[this.id];
       delete Session.ssnsByCookie[this.authToken];
    };
-   
+
+   deletedUser(user: string) {
+      let ssnsById = Session.ssnsById;
+      var userId:number = parseInt(String(userId))
+      console.log("User id = " + userId);
+      for (let i = 0; i < ssnsById.length; i++) {
+         console.log("Is session undefined? " + (ssnsById[i] === undefined));
+         if (ssnsById[i] !== undefined) {
+            console.log(ssnsById[i]);
+            console.log("Person id check = " + (parseInt(String(ssnsById[i].prsId)) === userId));
+         }
+         if (ssnsById[i] !== undefined && parseInt(String(ssnsById[i].prsId)) === userId) {
+            console.log("________________________");
+            console.log(ssnsById[i]);
+            console.log("Are they Equal? " + (ssnsById[i].prsId === userId));
+            delete ssnsById[i];
+            delete Session.ssnsByCookie[ssnsById[i].authToken];
+         }
+      }
+   };
+
    // Function router that will find any Session associated with |req|, based on
    // cookies, delete the Session if it has timed out, or attach the Session to
    // |req| if it's current If |req| has an attached Session after this process,
    // then down-chain routes will treat |req| as logged-in.
-   static router = function(req: Request, res: Response, next: Function) {
+   static router = function (req: Request, res: Response, next: Function) {
       var cookie = req.cookies[Session.cookieName];
       var session = cookie && Session.ssnsByCookie[cookie];
-      
+
       if (session) {
          // If the session was last used more than |duration| mS ago..
-         if (session.lastUsed < new Date().getTime() - Session.duration) 
-         session.logOut();
+         if (session.lastUsed < new Date().getTime() - Session.duration)
+            session.logOut();
          else {
             req.session = session;
          }
@@ -95,3 +117,5 @@ export class Session {
       next();
    };
 }
+
+module.exports = Session;
