@@ -1,2 +1,5 @@
 #node Modules\
 node_modules
+
+#build
+/built  

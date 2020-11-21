@@ -167,8 +167,12 @@ app.use(function (err: Error, req: Request, res: Response, next: Function) {
    req.cnn && req.cnn.release();
 });
 
-
-app.listen(process.argv[3], function () {
-   console.log('App Listening on port ' + process.argv[3]);
-   console.log(process.argv);
-});
+if (process.argv.includes('-p')) {
+   app.listen(process.argv[3], function () {
+      console.log('App Listening on port ' + process.argv[3]);
+   });
+} else {
+   app.listen(3000, function () {
+      console.log('App Listening on Port 3000');
+   })
+}
