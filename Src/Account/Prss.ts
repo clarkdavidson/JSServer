@@ -137,7 +137,7 @@ router.put('/:id', function (req: Request, res: Response) {
       },
       (prss: Person[], fields: any, cb: queryCallback) => {
          if (vld.check(Boolean(prss.length), Tags.notFound, null, cb) &&
-            vld.check(admin || body.oldPassword === prss[0].password, Tags.oldPwdMismatch, ["Password Does not Match Old Password"], cb)) {
+            vld.check(admin || body.oldPassword === prss[0].password || !body.password, Tags.oldPwdMismatch, ["pwdMismatch"], cb)) {
             delete body.id;
             delete body.oldPassword;
             if (Object.keys(body).length) {
@@ -230,7 +230,7 @@ router.delete('/:id', function (req: Request, res: Response) {
          }
       }],
       function (err: Error) {
-         console.log('Connection Releaserd');
+         console.log('Connection Released');
          req.cnn.release();
       });
 });

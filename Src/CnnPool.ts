@@ -52,4 +52,3 @@ export class CnnPool {
    };
 
 };
-module.exports = CnnPool;

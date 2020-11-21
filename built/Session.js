@@ -26,9 +26,9 @@ class Session {
         delete Session.ssnsByCookie[this.authToken];
     }
     ;
-    deletedUser(user) {
+    static deletedUser(user) {
         let ssnsById = Session.ssnsById;
-        var userId = parseInt(String(userId));
+        var userId = parseInt(String(user));
         console.log("User id = " + userId);
         for (let i = 0; i < ssnsById.length; i++) {
             console.log("Is session undefined? " + (ssnsById[i] === undefined));
@@ -40,8 +40,8 @@ class Session {
                 console.log("________________________");
                 console.log(ssnsById[i]);
                 console.log("Are they Equal? " + (ssnsById[i].prsId === userId));
-                delete ssnsById[i];
                 delete Session.ssnsByCookie[ssnsById[i].authToken];
+                delete ssnsById[i];
             }
         }
     }
@@ -57,6 +57,7 @@ Session.cookieName = 'CHSAuth'; // Cookie key for auth tokens
 Session.findById = (id) => Session.ssnsById[id];
 Session.getAllIds = () => Object.keys(Session.ssnsById);
 Session.getSessionsById = () => { return Session.ssnsById; };
+//static getCurrentUser = () => {return Session.ssnsById[this.id]}
 Session.resetAll = () => {
     Session.ssnsById = [];
     Session.ssnsByCookie = {};
@@ -78,4 +79,3 @@ Session.router = function (req, res, next) {
     }
     next();
 };
-module.exports = Session;

@@ -1,5 +1,5 @@
 var Express = require('express');
-var Tags = require('../Validator.js').Tags;
+import {Tags} from '../Validator.js';
 var { Session, router } = require('../Session.js');
 import { Router, Request, Response } from 'express'
 var router = Express.Router({ caseSensitive: true });

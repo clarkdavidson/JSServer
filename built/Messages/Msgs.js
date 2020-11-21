@@ -32,22 +32,21 @@ router.post('/:msgId/Likes', function (req, res) {
     var vld = req.validator;
     var msgId = req.params.msgId;
     var cnn = req.cnn;
-    var owners = Session.getAllIds().forEach((id) => {
-        Session.findById(id);
-    });
+    var array = Session.getSessionsById();
+    var owner = array[array.length - 1];
     async.waterfall([
         function (cb) {
             cnn.chkQry('select * from Message where id = ?', [msgId], cb);
         },
         function (existingMsg, fields, cb) {
             if (vld.check(Boolean(existingMsg.length), Tags.notFound, null, cb)) {
-                cnn.chkQry("select * from Likes where msgId = ? && prsId = ?", [msgId, owners.prsId], cb);
+                cnn.chkQry("select * from Likes where msgId = ? && prsId = ?", [msgId, owner.prsId], cb);
             }
             console.log("Second Statement Done");
         },
         function (existingLike, field, cb) {
             if (vld.check(!existingLike.length, null, null, cb)) {
-                cnn.chkQry('Insert Into Likes set prsId = ?, msgId = ?', [owners.prsId, msgId], cb);
+                cnn.chkQry('Insert Into Likes set prsId = ?, msgId = ?', [owner.prsId, msgId], cb);
             }
         },
         function (result, fields, cb) {

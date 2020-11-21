@@ -56,7 +56,7 @@ export class Validator {
 
       if (this.errors.length) {
          if (this.res) {
-            if (this.errors[0].tag === Validator.Tags.noPermission) {
+            if (this.errors[0].tag === Tags.noPermission) {
                console.log('Hitting 403');
                this.res.status(403).end();
             }
@@ -81,8 +81,9 @@ export class Validator {
    checkAdmin(cb: Function) {
       console.log('Checking for Admin');
       console.log(this.session.isAdmin());
+      console.log(this.session);
       return this.check(this.session && this.session.isAdmin(),
-         Validator.Tags.noPermission, null, cb);
+         Tags.noPermission, null, cb);
    };
    // Validate that AU is the specified person or is an admin
    checkPrsOK(prsId: number, cb: Function) {
@@ -93,10 +94,10 @@ export class Validator {
       // console.log(parseInt(this.session.prsId) === parseInt(prsId));
 
       let result = this.check(this.session &&
-         (this.session.isAdmin() || Number(this.session.prsId) === Number(prsId)),
-         Validator.Tags.noPermission, null, cb);
+         (this.session.isAdmin() || this.session.prsId === prsId),
+         Tags.noPermission, null, cb);
 
-      //console.log(result);
+      console.log(result);
 
       return result;
    };
@@ -105,16 +106,13 @@ export class Validator {
       var self = this;
 
       fieldList.forEach(function (name: string) {
-         self.chain(obj.hasOwnProperty(name), Validator.Tags.missingField, [name]);
+         self.chain(obj.hasOwnProperty(name), Tags.missingField, [name]);
       });
       return this.check(true, null, null, cb);
    };
 }
-
-
-
 // List of errors, and their corresponding resource string tags
-Validator.Tags = {
+ export let Tags = {
    noLogin: "noLogin",              // No active session/login
    noPermission: "noPermission",    // Login lacks permission.
    missingField: "missingField",    // Field missing. Params[0] is field name
@@ -130,8 +128,3 @@ Validator.Tags = {
    forbiddenField: "forbiddenField"
 };
 
-
-
-
-
-module.exports = Validator;

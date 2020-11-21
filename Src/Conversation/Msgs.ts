@@ -61,9 +61,8 @@ router.post('/:msgId/Likes', function (req: Request, res: Response) {
     var msgId = req.params.msgId;
     var cnn = req.cnn;
 
-    var owners = Session.getAllIds().forEach((id: number) => {
-        Session.findById(id);
-    });
+    var array = Session.getSessionsById();
+    var owner = array[array.length - 1];
 
     async.waterfall([
         function (cb: queryCallback) {
@@ -71,13 +70,13 @@ router.post('/:msgId/Likes', function (req: Request, res: Response) {
         },
         function (existingMsg: Message[], fields: any, cb: queryCallback) {
             if (vld.check(Boolean(existingMsg.length), Tags.notFound, null, cb)) {
-                cnn.chkQry("select * from Likes where msgId = ? && prsId = ?", [msgId, owners.prsId], cb)
+                cnn.chkQry("select * from Likes where msgId = ? && prsId = ?", [msgId, owner.prsId], cb)
             }
             console.log("Second Statement Done");
         },
         function (existingLike: Like[], field: any, cb: queryCallback) {
             if (vld.check(!existingLike.length, null, null, cb)) {
-                cnn.chkQry('Insert Into Likes set prsId = ?, msgId = ?', [owners.prsId, msgId], cb)
+                cnn.chkQry('Insert Into Likes set prsId = ?, msgId = ?', [owner.prsId, msgId], cb)
             }
         },
         function (result: Result, fields: any, cb: queryCallback) {

@@ -66,4 +66,3 @@ CnnPool.router = function (req, res, next) {
     });
 };
 ;
-module.exports = CnnPool;

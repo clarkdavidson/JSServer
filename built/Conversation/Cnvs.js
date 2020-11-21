@@ -31,11 +31,9 @@ router.post('/', function (req, res) {
     var vld = req.validator;
     var body = req.body;
     var cnn = req.cnn;
-    //Dont know if this will work?
-    var owners = Session.getAllIds().forEach((id) => {
-        Session.findById(id);
-    });
-    console.log(owners.prsId);
+    var array = Session.getSessionsById();
+    var owner = array[array.length - 1];
+    console.log(owner.prsId);
     console.log(body.title);
     console.log(body.title.length <= 80);
     async.waterfall([
@@ -47,7 +45,7 @@ router.post('/', function (req, res) {
         function (existingCnv, fields, cb) {
             console.log(existingCnv[0]);
             if (vld.check(!existingCnv.length, Tags.dupTitle, null, cb))
-                cnn.chkQry("insert into Conversation set title = ?, ownerId = ? ", [body.title, owners.prsId], cb);
+                cnn.chkQry("insert into Conversation set title = ?, ownerId = ? ", [body.title, owner.prsId], cb);
         },
         function (insRes, fields, cb) {
             res.location(router.baseURL + '/' + insRes.insertId).end();
@@ -62,9 +60,9 @@ router.put('/:cnvId', function (req, res) {
     var body = req.body;
     var cnn = req.cnn;
     var cnvId = req.params.cnvId;
-    var owners = Session.getAllIds().forEach((id) => {
-        Session.findById(id);
-    });
+    var array = Session.getSessionsById();
+    var owner = array[array.length - 1];
+    console.log(owner.prsId);
     async.waterfall([
         function (cb) {
             //console.log(ssn.prsId);
@@ -81,7 +79,7 @@ router.put('/:cnvId', function (req, res) {
         },
         function (sameTtl, fields, cb) {
             // console.log("sameTtl.legth = " + sameTtl.length);
-            if (vld.check(!(sameTtl.length) || ((sameTtl[0].id === parseInt(cnvId)) && (owners.prsId === sameTtl[0].ownerId)), Tags.dupTitle, null, cb)) {
+            if (vld.check(!(sameTtl.length) || ((sameTtl[0].id === parseInt(cnvId)) && (owner.prsId === sameTtl[0].ownerId)), Tags.dupTitle, null, cb)) {
                 cnn.chkQry("update Conversation set title = ? where id = ?", [body.title, cnvId], cb);
                 res.status(200).end();
             }
@@ -172,13 +170,12 @@ router.post('/:cnvId/Msgs', function (req, res) {
     var cnn = req.cnn;
     var body = req.body;
     var time = new Date();
-    var owners = Session.getAllIds().forEach((id) => {
-        Session.findById(id);
-    });
+    var array = Session.getSessionsById();
+    var owner = array[array.length - 1];
     async.waterfall([
         function (cb) {
             if (vld.check(body.content.length <= 5000, Tags.badValue, ["content"], cb))
-                cnn.chkQry('insert into Message set cnvId = ?, prsId = ?, whenMade = ? , content = ?, numLikes = 0', [cnvId, owners.prsId, time, body.content], cb);
+                cnn.chkQry('insert into Message set cnvId = ?, prsId = ?, whenMade = ? , content = ?, numLikes = 0', [cnvId, owner.prsId, time, body.content], cb);
         },
         function (result, field, cb) {
             res.location(router.baseURL + '/' + result.insertId).end();

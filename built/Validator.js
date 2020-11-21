@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Validator = void 0;
+exports.Tags = exports.Validator = void 0;
 // Create a validator that draws its session from |req|, and reports
 const CnnPool = require("./CnnPool");
 class Validator {
@@ -26,7 +26,7 @@ class Validator {
             this.errors.push({ tag: tag, params: params });
         if (this.errors.length) {
             if (this.res) {
-                if (this.errors[0].tag === Validator.Tags.noPermission) {
+                if (this.errors[0].tag === exports.Tags.noPermission) {
                     console.log('Hitting 403');
                     this.res.status(403).end();
                 }
@@ -52,7 +52,8 @@ class Validator {
     checkAdmin(cb) {
         console.log('Checking for Admin');
         console.log(this.session.isAdmin());
-        return this.check(this.session && this.session.isAdmin(), Validator.Tags.noPermission, null, cb);
+        console.log(this.session);
+        return this.check(this.session && this.session.isAdmin(), exports.Tags.noPermission, null, cb);
     }
     ;
     // Validate that AU is the specified person or is an admin
@@ -63,8 +64,8 @@ class Validator {
         // console.log(prsId);
         // console.log(parseInt(this.session.prsId) === parseInt(prsId));
         let result = this.check(this.session &&
-            (this.session.isAdmin() || Number(this.session.prsId) === Number(prsId)), Validator.Tags.noPermission, null, cb);
-        //console.log(result);
+            (this.session.isAdmin() || this.session.prsId === prsId), exports.Tags.noPermission, null, cb);
+        console.log(result);
         return result;
     }
     ;
@@ -72,7 +73,7 @@ class Validator {
     hasFields(obj, fieldList, cb) {
         var self = this;
         fieldList.forEach(function (name) {
-            self.chain(obj.hasOwnProperty(name), Validator.Tags.missingField, [name]);
+            self.chain(obj.hasOwnProperty(name), exports.Tags.missingField, [name]);
         });
         return this.check(true, null, null, cb);
     }
@@ -80,7 +81,7 @@ class Validator {
 }
 exports.Validator = Validator;
 // List of errors, and their corresponding resource string tags
-Validator.Tags = {
+exports.Tags = {
     noLogin: "noLogin",
     noPermission: "noPermission",
     missingField: "missingField",
@@ -95,4 +96,3 @@ Validator.Tags = {
     queryFailed: "queryFailed",
     forbiddenField: "forbiddenField"
 };
-module.exports = Validator;

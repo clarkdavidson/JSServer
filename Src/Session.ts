@@ -36,6 +36,7 @@ export class Session {
    static findById = (id: number | string) => Session.ssnsById[id as number];
    static getAllIds = () => Object.keys(Session.ssnsById);
    static getSessionsById = () =>{return Session.ssnsById};
+   //static getCurrentUser = () => {return Session.ssnsById[this.id]}
 
    static resetAll = () => {
       Session.ssnsById = [];
@@ -78,9 +79,9 @@ export class Session {
       delete Session.ssnsByCookie[this.authToken];
    };
 
-   deletedUser(user: string) {
+   static deletedUser(user: string) {
       let ssnsById = Session.ssnsById;
-      var userId:number = parseInt(String(userId))
+      var userId:number = parseInt(String(user))
       console.log("User id = " + userId);
       for (let i = 0; i < ssnsById.length; i++) {
          console.log("Is session undefined? " + (ssnsById[i] === undefined));
@@ -92,8 +93,8 @@ export class Session {
             console.log("________________________");
             console.log(ssnsById[i]);
             console.log("Are they Equal? " + (ssnsById[i].prsId === userId));
-            delete ssnsById[i];
             delete Session.ssnsByCookie[ssnsById[i].authToken];
+            delete ssnsById[i];
          }
       }
    };
@@ -117,5 +118,3 @@ export class Session {
       next();
    };
 }
-
-module.exports = Session;

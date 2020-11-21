@@ -167,6 +167,8 @@ app.use(function (err: Error, req: Request, res: Response, next: Function) {
    req.cnn && req.cnn.release();
 });
 
-app.listen(3000, function () {
-   console.log('App Listening on port 3000');
+
+app.listen(process.argv[3], function () {
+   console.log('App Listening on port ' + process.argv[3]);
+   console.log(process.argv);
 });
