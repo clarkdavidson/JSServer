@@ -1,15 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var Express = require('express');
-const Validator_js_1 = require("../Validator.js");
-var { Session, router } = require('../Session.js');
+const Validator_1 = require("../Validator");
+const Session_1 = require("../Session");
 var router = Express.Router({ caseSensitive: true });
 router.baseURL = '/Ssns';
 router.get('/', function (req, res) {
     var body = [], ssn;
     if (req.validator.checkAdmin(null)) {
-        Session.getAllIds().forEach((id) => {
-            ssn = Session.findById(id);
+        Session_1.Session.getAllIds().forEach((id) => {
+            ssn = Session_1.Session.findById(id);
             //console.log(ssn);
             body.push({ id: ssn.id, prsId: ssn.prsId, loginTime: ssn.loginTime });
         });
@@ -25,8 +25,8 @@ router.post('/', function (req, res) {
     var cnn = req.cnn;
     cnn.chkQry('select * from Person where email = ?', [req.body.email], function (err, result) {
         if (req.validator.check(result.length && result[0].password ===
-            req.body.password, Validator_js_1.Tags.badLogin, null, null)) {
-            ssn = new Session(result[0], res);
+            req.body.password, Validator_1.Tags.badLogin, null, null)) {
+            ssn = new Session_1.Session(result[0], res);
             //console.log(result[0]);
             res.location(router.baseURL + '/' + ssn.id).end();
         }
@@ -40,10 +40,10 @@ router.delete('/:id', function (req, res) {
     console.log("Req Query ID " + req.params.id);
     //var newarray = Session.getSessionsById();
     //console.log(Session.getSessionsById());
-    var ssn = Session.findById(req.params.id);
+    var ssn = Session_1.Session.findById(req.params.id);
     //console.log(ssn);
     console.log("ssn set");
-    if (vld.check(ssn, Validator_js_1.Tags.notFound, null, null) && vld.checkPrsOK(ssn.prsId, null)) {
+    if (vld.check(Boolean(ssn), Validator_1.Tags.notFound, null, null) && vld.checkPrsOK(ssn.prsId, null)) {
         ssn.logOut();
         console.log("ssn Logout Occured");
         res.end();
@@ -54,10 +54,10 @@ router.delete('/:id', function (req, res) {
 router.get('/:id', function (req, res) {
     var vld = req.validator;
     console.log(req.params.id);
-    var ssn = Session.findById(req.params.id);
+    var ssn = Session_1.Session.findById(req.params.id);
     console.log(ssn);
     //Added check for admin. <----------------
-    if ((vld.check(ssn, Validator_js_1.Tags.notFound, null, null) && vld.checkPrsOK(ssn.id, null))
+    if ((vld.check(Boolean(ssn), Validator_1.Tags.notFound, null, null) && vld.checkPrsOK(ssn.id, null))
         || vld.checkAdmin(null)) {
         res.json({ id: ssn.id, prsId: ssn.prsId, loginTime: ssn.loginTime });
     }

@@ -1,10 +1,13 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var Express = require('express');
-var Tags = require('../Validator.js').Tags;
-var { Session, router } = require('../Session.js');
+const Validator_1 = require("../Validator");
+const Session_1 = require("../Session");
 var router = Express.Router({ caseSensitive: true });
-var async = require('async');
+const async_1 = __importDefault(require("async"));
 router.baseURL = '/Cnvs';
 // Need to add ownerID search functionality
 // Return Values ??
@@ -31,20 +34,20 @@ router.post('/', function (req, res) {
     var vld = req.validator;
     var body = req.body;
     var cnn = req.cnn;
-    var array = Session.getSessionsById();
+    var array = Session_1.Session.getSessionsById();
     var owner = array[array.length - 1];
     console.log(owner.prsId);
     console.log(body.title);
     console.log(body.title.length <= 80);
-    async.waterfall([
+    async_1.default.waterfall([
         function (cb) {
-            if (vld.check((body.title.length <= 80), Tags.badValue, ["title"], cb) &&
-                vld.check((body.title !== "" && body.title !== null), Tags.missingField, ["title"], cb))
+            if (vld.check((body.title.length <= 80), Validator_1.Tags.badValue, ["title"], cb) &&
+                vld.check((body.title !== "" && body.title !== null), Validator_1.Tags.missingField, ["title"], cb))
                 cnn.chkQry('select * from Conversation where title = ?', body.title, cb);
         },
         function (existingCnv, fields, cb) {
             console.log(existingCnv[0]);
-            if (vld.check(!existingCnv.length, Tags.dupTitle, null, cb))
+            if (vld.check(!existingCnv.length, Validator_1.Tags.dupTitle, null, cb))
                 cnn.chkQry("insert into Conversation set title = ?, ownerId = ? ", [body.title, owner.prsId], cb);
         },
         function (insRes, fields, cb) {
@@ -60,13 +63,13 @@ router.put('/:cnvId', function (req, res) {
     var body = req.body;
     var cnn = req.cnn;
     var cnvId = req.params.cnvId;
-    var array = Session.getSessionsById();
+    var array = Session_1.Session.getSessionsById();
     var owner = array[array.length - 1];
     console.log(owner.prsId);
-    async.waterfall([
+    async_1.default.waterfall([
         function (cb) {
             //console.log(ssn.prsId);
-            if (vld.check(body.title.length <= 80, Tags.badValue, ["title"], cb))
+            if (vld.check(body.title.length <= 80, Validator_1.Tags.badValue, ["title"], cb))
                 cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
         },
         function (cnvs, fields, cb) {
@@ -74,12 +77,12 @@ router.put('/:cnvId', function (req, res) {
             //console.log("Convo Length = " + cnvs.length);
             //console.log("Is Person Okay " + vld.checkPrsOK(cnvs[0].ownerId));
             if (vld.checkPrsOK(cnvs[0].ownerId, cb) &&
-                vld.check(Boolean(cnvs.length), Tags.notFound, null, cb))
+                vld.check(Boolean(cnvs.length), Validator_1.Tags.notFound, null, cb))
                 cnn.chkQry('select * from Conversation where title = ?', [body.title], cb);
         },
         function (sameTtl, fields, cb) {
             // console.log("sameTtl.legth = " + sameTtl.length);
-            if (vld.check(!(sameTtl.length) || ((sameTtl[0].id === parseInt(cnvId)) && (owner.prsId === sameTtl[0].ownerId)), Tags.dupTitle, null, cb)) {
+            if (vld.check(!(sameTtl.length) || ((sameTtl[0].id === parseInt(cnvId)) && (owner.prsId === sameTtl[0].ownerId)), Validator_1.Tags.dupTitle, null, cb)) {
                 cnn.chkQry("update Conversation set title = ? where id = ?", [body.title, cnvId], cb);
                 res.status(200).end();
             }
@@ -92,12 +95,12 @@ router.delete('/:cnvId', function (req, res) {
     var vld = req.validator;
     var cnvId = req.params.cnvId;
     var cnn = req.cnn;
-    async.waterfall([
+    async_1.default.waterfall([
         function (cb) {
             cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
         },
         function (cnvs, fields, cb) {
-            if (vld.check(Boolean(cnvs.length), Tags.notFound, null, cb) &&
+            if (vld.check(Boolean(cnvs.length), Validator_1.Tags.notFound, null, cb) &&
                 vld.checkPrsOK(cnvs[0].ownerId, cb))
                 cnn.chkQry('delete from Conversation where id = ?', [cnvId], cb);
             res.status(200).end();
@@ -110,13 +113,13 @@ router.get('/:cnvId', function (req, res) {
     var vld = req.validator;
     var cnvId = req.params.cnvId;
     var cnn = req.cnn;
-    async.waterfall([
+    async_1.default.waterfall([
         function (cb) {
             cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
         },
         function (cnvs, fields, cb) {
-            if (vld.check(Boolean(cnvs.length), Tags.notFound, null, cb))
-                res.json(cnvs);
+            if (vld.check(Boolean(cnvs.length), Validator_1.Tags.notFound, null, cb))
+                res.json(cnvs[0]);
             cb(null);
         }
     ], function (err) {
@@ -131,12 +134,13 @@ router.get('/:cnvId/Msgs', function (req, res) {
     var checkDate = new Date(dateTime);
     var num = req.query.num || null;
     console.log(cnvId);
-    async.waterfall([
+    console.log("YOU ARE IN A GET");
+    async_1.default.waterfall([
         function (cb) {
             cnn.chkQry('Select * from Conversation where id = ?', [cnvId], cb);
         },
         function (exisitingCnv, fields, cb) {
-            if (vld.check(Boolean(exisitingCnv.length), Tags.notFound, null, cb)) {
+            if (vld.check(Boolean(exisitingCnv.length), Validator_1.Tags.notFound, null, cb)) {
                 if (num) {
                     cnn.chkQry(' Select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where M.cnvId = ? ORDER BY M.whenMade LIMIT ?', [cnvId, parseInt(num)], cb);
                 }
@@ -145,7 +149,7 @@ router.get('/:cnvId/Msgs', function (req, res) {
                 }
             }
         }
-    ], function (err, result, fields) {
+    ], function (err, result) {
         if (!err) {
             res.json(result);
         }
@@ -170,11 +174,12 @@ router.post('/:cnvId/Msgs', function (req, res) {
     var cnn = req.cnn;
     var body = req.body;
     var time = new Date();
-    var array = Session.getSessionsById();
+    console.log("YOU ARE IN A POST");
+    var array = Session_1.Session.getSessionsById();
     var owner = array[array.length - 1];
-    async.waterfall([
+    async_1.default.waterfall([
         function (cb) {
-            if (vld.check(body.content.length <= 5000, Tags.badValue, ["content"], cb))
+            if (vld.check(body.content.length <= 5000, Validator_1.Tags.badValue, ["content"], cb))
                 cnn.chkQry('insert into Message set cnvId = ?, prsId = ?, whenMade = ? , content = ?, numLikes = 0', [cnvId, owner.prsId, time, body.content], cb);
         },
         function (result, field, cb) {

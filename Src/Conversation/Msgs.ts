@@ -1,11 +1,11 @@
 var Express = require('express');
-var Tags = require('../Validator.js').Tags;
-var { Session, router } = require('../Session.js');
+import {Tags} from '../Validator';
+import { Session } from "../Session";
 var router = Express.Router({ caseSensitive: true });
-import { Router, Request, Response } from 'express'
+import {  Request, Response } from 'express'
 import { queryCallback } from 'mysql';
-var async = require('async');
-var mysql = require('mysql');
+import async from 'async';
+import mysql from 'mysql';
 
 router.baseURL = '/Msgs';
 

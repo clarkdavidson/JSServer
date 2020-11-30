@@ -1,10 +1,12 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var Express = require('express');
-var Tags = require('../Validator.js').Tags;
-var async = require('async');
-var mysql = require('mysql');
-const { Session } = require('../Session.js');
+const Validator_1 = require("../Validator");
+const async_1 = __importDefault(require("async"));
+const Session_1 = require("../Session");
 var router = Express.Router({ caseSensitive: true });
 router.baseURL = '/Prss';
 //Remove Password from this return value!
@@ -37,10 +39,10 @@ router.get('/', function (req, res) {
     }
     else if (!req.session.isAdmin() && (req.session.email.includes(email) || !email)) {
         console.log('3');
-        req.cnn.chkQry('select id,email from person where email = ?', [req.session.email], handler);
+        req.cnn.chkQry('select id,email from Person where email = ?', [req.session.email], handler);
     }
     else if (!req.session.isAdmin() && !req.session.email.includes(email)) {
-        req.cnn.chkQry('select id, email from person where email = null', null, handler);
+        req.cnn.chkQry('select id, email from Person where email = null', null, handler);
     }
 });
 router.post('/', function (req, res) {
@@ -48,36 +50,37 @@ router.post('/', function (req, res) {
     var body = req.body; // Request Body
     var admin = req.session && req.session.isAdmin(); //Check for Admin
     var cnn = req.cnn; // Connection From Connection Pool
+    console.log(body.firstName);
     if (admin && !body.password)
         body.password = "*"; // Blocking password
     body.whenRegistered = new Date();
-    async.waterfall([
+    async_1.default.waterfall([
         function (cb) {
             if (vld.hasFields(body, ["email", "password", "role"], cb) &&
-                vld.chain(body.role === 0 || admin, Tags.forbiddenRole, null)
-                    //.chain(body.roll !== null || body.roll !== "", Tags.missingField, ['role'])
-                    .chain(body.termsAccepted || admin, Tags.noTerms, null)
-                    .chain(body.password || admin, Tags.missingField, ['password'])
-                    .chain(body.email, Tags.missingField, ['email'])
-                    .chain(body.lastName, Tags.missingField, ['lastName'])
-                    .chain(body.firstName.length <= 30, Tags.badValue, ['firstName'])
-                    .chain(body.email.length <= 150, Tags.badValue, ['email'])
-                    .chain(body.lastName.length <= 50, Tags.badValue, ['lastName'])
-                    .chain(body.password.length <= 50, Tags.badValue, ['password'])
-                    .check(body.role >= 0, Tags.badValue, ["role"], cb)) {
+                vld.check(body.role !== null, Validator_1.Tags.missingField, ['role'], cb) &&
+                vld.chain(body.role === 0 || admin, Validator_1.Tags.forbiddenRole, null)
+                    .chain(body.termsAccepted || admin, Validator_1.Tags.noTerms, null)
+                    .chain(body.password || admin, Validator_1.Tags.missingField, ['password'])
+                    .chain(body.email, Validator_1.Tags.missingField, ['email'])
+                    .chain(body.lastName, Validator_1.Tags.missingField, ['lastName'])
+                    .chain(body.firstName && body.firstName.length <= 30, Validator_1.Tags.badValue, ['firstName'])
+                    .chain(body.email !== null && body.email.length <= 150, Validator_1.Tags.badValue, ['email'])
+                    .chain(body.lastName.length <= 50, Validator_1.Tags.badValue, ['lastName'])
+                    .chain(body.password.length <= 50, Validator_1.Tags.badValue, ['password'])
+                    .check(body.role >= 0, Validator_1.Tags.badValue, ["role"], cb)) {
                 cnn.chkQry('select * from Person where email = ?', body.email, cb);
             }
         },
         function (existingPrss, fields, cb) {
-            if (vld.check(!existingPrss.length, Tags.dupEmail, null, cb) &&
-                vld.check(body.role !== null || body.role !== "", Tags.missingField, ["role"], cb)) {
+            if (vld.check(!existingPrss.length, Validator_1.Tags.dupEmail, null, cb) &&
+                vld.check(body.role !== null || body.role !== "", Validator_1.Tags.missingField, ["role"], cb)) {
                 body.termsAccepted = body.termsAccepted && new Date();
                 cnn.chkQry('insert into Person set ?', body, cb);
             }
         },
         function (result, fields, cb) {
             res.location(router.baseURL + '/' + result.insertId).end();
-            cb(false, null, null);
+            cb();
         }
     ], function (err) {
         cnn.release();
@@ -89,22 +92,22 @@ router.put('/:id', function (req, res) {
     var body = req.body;
     var admin = req.session.isAdmin();
     var cnn = req.cnn;
-    async.waterfall([
+    async_1.default.waterfall([
         function (cb) {
             if (vld.checkPrsOK(parseInt(req.params.id), cb) &&
-                vld.chain(!("whenRegistered" in body), Tags.forbiddenField, ["whenRegistered"])
-                    .chain(!("termsAccepted" in body), Tags.forbiddenField, ["termsAccepted"])
-                    .chain(!("role" in body) || body.role === 0 || admin, Tags.badValue, ["role"])
-                    .chain(!("password" in body) || (body.password !== null && body.password !== "") && body.password.length <= 50, Tags.badValue, ["password"])
-                    .chain(admin || !body.password || body.oldPassword, Tags.forbiddenRole, ['role'])
-                    .chain(!("lastName" in body) || body.lastName.length <= 50, Tags.badValue, ["lastName"])
-                    .chain(!("email" in body), Tags.badValue, ["email"])
-                    .check(!("firstName" in body) || body.firstName.length <= 30, Tags.badValue, ["firstName"], cb))
+                vld.chain(!("whenRegistered" in body), Validator_1.Tags.forbiddenField, ["whenRegistered"])
+                    .chain(!("termsAccepted" in body), Validator_1.Tags.forbiddenField, ["termsAccepted"])
+                    .chain(!("role" in body) || body.role === 0 || admin, Validator_1.Tags.badValue, ["role"])
+                    .chain(!("password" in body) || (body.password !== null && body.password !== "") && body.password.length <= 50, Validator_1.Tags.badValue, ["password"])
+                    .chain(admin || !body.password || body.oldPassword, Validator_1.Tags.forbiddenRole, ['role'])
+                    .chain(!("lastName" in body) || body.lastName.length <= 50, Validator_1.Tags.badValue, ["lastName"])
+                    .chain(!("email" in body), Validator_1.Tags.badValue, ["email"])
+                    .check(!("firstName" in body) || body.firstName.length <= 30, Validator_1.Tags.badValue, ["firstName"], cb))
                 cnn.chkQry('select * from Person where id = ?', [req.params.id], cb);
         },
         (prss, fields, cb) => {
-            if (vld.check(Boolean(prss.length), Tags.notFound, null, cb) &&
-                vld.check(admin || body.oldPassword === prss[0].password || !body.password, Tags.oldPwdMismatch, ["pwdMismatch"], cb)) {
+            if (vld.check(Boolean(prss.length), Validator_1.Tags.notFound, null, cb) &&
+                vld.check(admin || body.oldPassword === prss[0].password || !body.password, Validator_1.Tags.oldPwdMismatch, ["pwdMismatch"], cb)) {
                 delete body.id;
                 delete body.oldPassword;
                 if (Object.keys(body).length) {
@@ -128,13 +131,13 @@ router.put('/:id', function (req, res) {
 //Remove Password from PrsArr
 router.get('/:id', function (req, res) {
     var vld = req.validator;
-    async.waterfall([
+    async_1.default.waterfall([
         function (cb) {
             if (vld.checkPrsOK(parseInt(req.params.id), cb) || vld.checkAdmin(cb))
                 req.cnn.chkQry('select * from Person where id = ?', [req.params.id], cb);
         },
         function (prsArr, fields, cb) {
-            if (vld.check(Boolean(prsArr.length), Tags.notFound, null, cb)) {
+            if (vld.check(Boolean(prsArr.length), Validator_1.Tags.notFound, null, cb)) {
                 console.log(prsArr[0].password);
                 delete prsArr[0].password;
                 console.log(prsArr[0].password);
@@ -169,8 +172,8 @@ router.delete('/:id', function (req, res) {
     var vld = req.validator;
     var userId = req.params.id;
     console.log(userId);
-    Session.deletedUser(userId);
-    async.waterfall([
+    Session_1.Session.deletedUser(userId);
+    async_1.default.waterfall([
         function (cb) {
             if (vld.checkAdmin(cb)) {
                 //console.log("Admin Check Cleared");
@@ -179,7 +182,7 @@ router.delete('/:id', function (req, res) {
             }
         },
         function (result, fields, cb) {
-            if (vld.check(Boolean(result.affectedRows), Tags.notFound, null, cb)) {
+            if (vld.check(Boolean(result.affectedRows), Validator_1.Tags.notFound, null, cb)) {
                 //console.log("Person Deleted");
                 res.end();
                 cb();

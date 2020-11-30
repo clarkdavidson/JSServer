@@ -1,10 +1,10 @@
 var Express = require('express');
-import { Router, Request, Response } from 'express'
+import { Request, Response } from 'express'
 import { queryCallback } from 'mysql';
-var Tags = require('../Validator.js').Tags;
-var async = require('async');
-var mysql = require('mysql');
-const { Session } = require('../Session.js');
+import { Tags } from '../Validator';
+import async from 'async';
+import mysql from 'mysql';
+import { Session } from "../Session";
 
 var router = Express.Router({ caseSensitive: true });
 
@@ -62,9 +62,9 @@ router.get('/', function (req: Request, res: Response) {
    }
    else if (!req.session.isAdmin() && (req.session.email.includes(email as string) || !email)) {
       console.log('3');
-      req.cnn.chkQry('select id,email from person where email = ?', [req.session.email], handler);
+      req.cnn.chkQry('select id,email from Person where email = ?', [req.session.email], handler);
    } else if (!req.session.isAdmin() && !req.session.email.includes(email as string)) {
-      req.cnn.chkQry('select id, email from person where email = null', null, handler);
+      req.cnn.chkQry('select id, email from Person where email = null', null, handler);
    }
 
 });
@@ -82,14 +82,14 @@ router.post('/', function (req: Request, res: Response) {
    async.waterfall([
       function (cb: queryCallback) { // Check properties and search for Email duplicates
          if (vld.hasFields(body, ["email", "password", "role"], cb) &&
+            vld.check(body.role !== null, Tags.missingField, ['role'], cb) &&
             vld.chain(body.role === 0 || admin, Tags.forbiddenRole, null)
-               //.chain(body.roll !== null || body.roll !== "", Tags.missingField, ['role'])
                .chain(body.termsAccepted || admin, Tags.noTerms, null)
                .chain(body.password || admin, Tags.missingField, ['password'])
                .chain(body.email, Tags.missingField, ['email'])
                .chain(body.lastName, Tags.missingField, ['lastName'])
-               .chain(body.firstName.length <= 30, Tags.badValue, ['firstName'])
-               .chain(body.email.length <= 150, Tags.badValue, ['email'])
+               .chain(body.firstName !== null && body.firstName.length <= 30, Tags.badValue, ['firstName'])
+               .chain(body.email !== null && body.email.length <= 150, Tags.badValue, ['email'])
                .chain(body.lastName.length <= 50, Tags.badValue, ['lastName'])
                .chain(body.password.length <= 50, Tags.badValue, ['password'])
                .check(body.role >= 0, Tags.badValue, ["role"], cb)) {
@@ -105,7 +105,7 @@ router.post('/', function (req: Request, res: Response) {
       },
       function (result: Result, fields: any, cb: Function) { // Return location of inserted Person
          res.location(router.baseURL + '/' + result.insertId).end();
-         cb(false, null, null);
+         cb();
       }],
       function (err: Error) {
          cnn.release();
@@ -150,7 +150,7 @@ router.put('/:id', function (req: Request, res: Response) {
          }
 
       },
-      (updateResult: any, fields: any, cb: any) => {
+      (updateResult: any, fields: any, cb: Function) => {
          res.status(200).end();
          cb();
       }],

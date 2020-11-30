@@ -1,10 +1,10 @@
 var Express = require('express');
 import { Router, Request, Response } from 'express'
 import { queryCallback } from 'mysql';
-var Tags = require('../Validator.js').Tags;
-var { Session, router } = require('../Session.js');
+import {Tags} from '../Validator';
+import { Session } from "../Session";
 var router = Express.Router({ caseSensitive: true });
-var async = require('async');
+import async from 'async';
 
 
 router.baseURL = '/Cnvs';
@@ -149,7 +149,7 @@ router.get('/:cnvId', function (req: Request, res: Response) {
       },
       function (cnvs: Conversation[], fields: any, cb: queryCallback) {
          if (vld.check(Boolean(cnvs.length), Tags.notFound, null, cb))
-            res.json(cnvs);
+            res.json(cnvs[0]);
          cb(null)
       }],
       function (err: Error) {
@@ -169,6 +169,7 @@ router.get('/:cnvId/Msgs', function (req: Request, res: Response) {
    var num = req.query.num || null;
 
    console.log(cnvId);
+   console.log("YOU ARE IN A GET");
 
 
 
@@ -188,7 +189,7 @@ router.get('/:cnvId/Msgs', function (req: Request, res: Response) {
             }
          }
       }],
-      function (err: Error, result: Conversation, fields: any) {
+      function (err:any, result:any) {
          if (!err) {
             res.json(result);
          }
@@ -217,6 +218,7 @@ router.post('/:cnvId/Msgs', function (req: Request, res: Response) {
    var cnn = req.cnn;
    var body = req.body;
    var time = new Date();
+   console.log("YOU ARE IN A POST");
 
    var array = Session.getSessionsById();
    var owner = array[array.length - 1];
@@ -227,7 +229,7 @@ router.post('/:cnvId/Msgs', function (req: Request, res: Response) {
             cnn.chkQry('insert into Message set cnvId = ?, prsId = ?, whenMade = ? , content = ?, numLikes = 0',
                [cnvId, owner.prsId, time, body.content], cb)
       },
-      function (result: Result, field: any, cb: queryCallback) {
+      function (result: Result, field: any, cb: Function) {
          res.location(router.baseURL + '/' + result.insertId).end();
          cb(null);
       }],
