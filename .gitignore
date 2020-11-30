@@ -1,6 +1,7 @@
 #node Modules\
-node_modules\
+node_modules/*
 
 #build
 built/  
 built/Account/Prss.js
+node_modules/async/allLimit.js
