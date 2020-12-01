@@ -97,7 +97,7 @@ export class Validator {
          (this.session.isAdmin() || this.session.prsId === prsId),
          Tags.noPermission, null, cb);
 
-      console.log(result);
+      //console.log(result);
 
       return result;
    };
@@ -106,7 +106,9 @@ export class Validator {
       var self = this;
 
       fieldList.forEach(function (name: string) {
-         self.chain(obj.hasOwnProperty(name), Tags.missingField, [name]);
+         console.log("Is " + name + " Undefined? " + name !== undefined);
+         self.chain(obj.hasOwnProperty(name), Tags.missingField, [name])
+         .chain(name !== undefined, Tags.badValue,[name]);
       });
       return this.check(true, null, null, cb);
    };

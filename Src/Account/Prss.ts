@@ -5,6 +5,7 @@ import { Tags } from '../Validator';
 import async from 'async';
 import mysql from 'mysql';
 import { Session } from "../Session";
+import { unescapeLeadingUnderscores } from 'typescript';
 
 var router = Express.Router({ caseSensitive: true });
 
@@ -81,17 +82,16 @@ router.post('/', function (req: Request, res: Response) {
 
    async.waterfall([
       function (cb: queryCallback) { // Check properties and search for Email duplicates
-         if (vld.hasFields(body, ["email", "password", "role"], cb) &&
+         if (vld.hasFields(body, ["email", "password", "role", "lastName"], cb) &&
             vld.check(body.role !== null, Tags.missingField, ['role'], cb) &&
             vld.chain(body.role === 0 || admin, Tags.forbiddenRole, null)
                .chain(body.termsAccepted || admin, Tags.noTerms, null)
                .chain(body.password || admin, Tags.missingField, ['password'])
                .chain(body.email, Tags.missingField, ['email'])
-               .chain(body.lastName, Tags.missingField, ['lastName'])
-               .chain(body.firstName !== null && body.firstName.length <= 30, Tags.badValue, ['firstName'])
-               .chain(body.email !== null && body.email.length <= 150, Tags.badValue, ['email'])
-               .chain(body.lastName.length <= 50, Tags.badValue, ['lastName'])
-               .chain(body.password.length <= 50, Tags.badValue, ['password'])
+               .chain(body.firstName && body.firstName.length <= 30, Tags.badValue, ['firstName'])
+               .chain((body.email !== null && body.email !== undefined) && body.email.length <= 150, Tags.badValue, ['email'])
+               .chain(body.lastName  && body.lastName.length <= 50, Tags.badValue, ['lastName'])
+               .chain((body.password !== null && body.password !== undefined) && body.password.length <= 50, Tags.badValue, ['password'])
                .check(body.role >= 0, Tags.badValue, ["role"], cb)) {
             cnn.chkQry('select * from Person where email = ?', body.email, cb)
          }
@@ -127,11 +127,14 @@ router.put('/:id', function (req: Request, res: Response) {
             vld.chain(!("whenRegistered" in body), Tags.forbiddenField, ["whenRegistered"])
                .chain(!("termsAccepted" in body), Tags.forbiddenField, ["termsAccepted"])
                .chain(!("role" in body) || body.role === 0 || admin, Tags.badValue, ["role"])
-               .chain(!("password" in body) || (body.password !== null && body.password !== "") && body.password.length <= 50, Tags.badValue, ["password"])
+               .chain(!("password" in body) || (body.password !== null && body.password !== undefined &&
+                   body.password !== "") && body.password.length <= 50, Tags.badValue, ["password"])
                .chain(admin || !body.password || body.oldPassword, Tags.forbiddenRole, ['role'])
-               .chain(!("lastName" in body) || body.lastName.length <= 50, Tags.badValue, ["lastName"])
+               .chain(!("lastName" in body) || (body.lastName !== null && body.lastName !== undefined &&
+                   body.lastName !== "") && body.lastName.length <= 50, Tags.badValue, ["lastName"])
                .chain(!("email" in body), Tags.badValue, ["email"])
-               .check(!("firstName" in body) || body.firstName.length <= 30,
+               .check(!("firstName" in body) ||(body.firstName !== null && body.firstName !== undefined)
+                && body.firstName.length <= 30,
                   Tags.badValue, ["firstName"], cb))
             cnn.chkQry('select * from Person where id = ?', [req.params.id], cb);
       },

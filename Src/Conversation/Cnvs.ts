@@ -1,7 +1,7 @@
 var Express = require('express');
 import { Router, Request, Response } from 'express'
 import { queryCallback } from 'mysql';
-import {Tags} from '../Validator';
+import { Tags } from '../Validator';
 import { Session } from "../Session";
 var router = Express.Router({ caseSensitive: true });
 import async from 'async';
@@ -55,12 +55,14 @@ router.post('/', function (req: Request, res: Response) {
 
    console.log(owner.prsId);
    console.log(body.title);
-   console.log(body.title.length <= 80);
+   if (body.title !== null && body.title !== undefined) {
+      console.log(body.title.length <= 80);
+   }
 
    async.waterfall([
       function (cb: queryCallback) {
          if (vld.check((body.title.length <= 80), Tags.badValue, ["title"], cb) &&
-            vld.check((body.title !== "" && body.title !== null), Tags.missingField, ["title"], cb))
+            vld.check((body.title !== "" && body.title !== null && body.title !== undefined), Tags.missingField, ["title"], cb))
             cnn.chkQry('select * from Conversation where title = ?', body.title, cb);
       },
       function (existingCnv: Conversation[], fields: any, cb: queryCallback) {
@@ -69,7 +71,7 @@ router.post('/', function (req: Request, res: Response) {
             cnn.chkQry("insert into Conversation set title = ?, ownerId = ? ",
                [body.title, owner.prsId], cb);
       },
-      function (insRes: Result, fields: any, cb:Function) {
+      function (insRes: Result, fields: any, cb: Function) {
          res.location(router.baseURL + '/' + insRes.insertId).end();
          cb();
       }],
@@ -83,7 +85,7 @@ router.put('/:cnvId', function (req: Request, res: Response) {
    var body = req.body;
    var cnn = req.cnn;
    var cnvId = req.params.cnvId;
-   
+
    var array = Session.getSessionsById();
    var owner = array[array.length - 1];
 
@@ -189,7 +191,7 @@ router.get('/:cnvId/Msgs', function (req: Request, res: Response) {
             }
          }
       }],
-      function (err:any, result:any) {
+      function (err: any, result: any) {
          if (!err) {
             res.json(result);
          }

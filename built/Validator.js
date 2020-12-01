@@ -65,7 +65,7 @@ class Validator {
         // console.log(parseInt(this.session.prsId) === parseInt(prsId));
         let result = this.check(this.session &&
             (this.session.isAdmin() || this.session.prsId === prsId), exports.Tags.noPermission, null, cb);
-        console.log(result);
+        //console.log(result);
         return result;
     }
     ;
@@ -73,7 +73,9 @@ class Validator {
     hasFields(obj, fieldList, cb) {
         var self = this;
         fieldList.forEach(function (name) {
-            self.chain(obj.hasOwnProperty(name), exports.Tags.missingField, [name]);
+            console.log(name === null);
+            self.chain(obj.hasOwnProperty(name), exports.Tags.missingField, [name])
+                .chain(name !== undefined && name !== null, exports.Tags.badValue, [name]);
         });
         return this.check(true, null, null, cb);
     }

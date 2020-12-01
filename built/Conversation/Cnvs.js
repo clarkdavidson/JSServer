@@ -38,11 +38,13 @@ router.post('/', function (req, res) {
     var owner = array[array.length - 1];
     console.log(owner.prsId);
     console.log(body.title);
-    console.log(body.title.length <= 80);
+    if (body.title !== null && body.title !== undefined) {
+        console.log(body.title.length <= 80);
+    }
     async_1.default.waterfall([
         function (cb) {
             if (vld.check((body.title.length <= 80), Validator_1.Tags.badValue, ["title"], cb) &&
-                vld.check((body.title !== "" && body.title !== null), Validator_1.Tags.missingField, ["title"], cb))
+                vld.check((body.title !== "" && body.title !== null && body.title !== undefined), Validator_1.Tags.missingField, ["title"], cb))
                 cnn.chkQry('select * from Conversation where title = ?', body.title, cb);
         },
         function (existingCnv, fields, cb) {
