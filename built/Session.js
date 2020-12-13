@@ -29,17 +29,8 @@ class Session {
     static deletedUser(user) {
         let ssnsById = Session.ssnsById;
         var userId = parseInt(String(user));
-        console.log("User id = " + userId);
         for (let i = 0; i < ssnsById.length; i++) {
-            console.log("Is session undefined? " + (ssnsById[i] === undefined));
-            if (ssnsById[i] !== undefined) {
-                console.log(ssnsById[i]);
-                console.log("Person id check = " + (parseInt(String(ssnsById[i].prsId)) === userId));
-            }
             if (ssnsById[i] !== undefined && parseInt(String(ssnsById[i].prsId)) === userId) {
-                console.log("________________________");
-                console.log(ssnsById[i]);
-                console.log("Are they Equal? " + (ssnsById[i].prsId === userId));
                 delete Session.ssnsByCookie[ssnsById[i].authToken];
                 delete ssnsById[i];
             }

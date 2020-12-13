@@ -75,11 +75,9 @@ app.delete('/DB', function (req, res) {
         cbs.push((cb) => {
             Session_1.Session.getAllIds().forEach((id) => {
                 Session_1.Session.findById(id).logOut();
-                console.log("Clearing " + id);
             });
             var test = Session_1.Session.getSessionsById();
             test.length = 0;
-            console.log(test.length);
             cb();
         });
         async_1.default.series(cbs, (err) => {

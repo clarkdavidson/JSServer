@@ -29,7 +29,9 @@ export class Validator {
       forbiddenRole: string; // Cannot set to this role
       oldPwdMismatch: string; // Password change requires old password
       dupTitle: string; // Title duplicates an existing cnv title
-      queryFailed: string; forbiddenField: string;
+      queryFailed: string;
+      forbiddenField: string;
+      noOldPwd: string;
    };
 
    constructor(req: Request, res: Response) {
@@ -79,42 +81,41 @@ export class Validator {
    };
 
    checkAdmin(cb: Function) {
-      console.log('Checking for Admin');
-      console.log(this.session.isAdmin());
-      console.log(this.session);
       return this.check(this.session && this.session.isAdmin(),
          Tags.noPermission, null, cb);
    };
    // Validate that AU is the specified person or is an admin
    checkPrsOK(prsId: number, cb: Function) {
-      // console.log(this.session);
-      // console.log("Is user a Admin? " + this.session.isAdmin());
-      // console.log("User PrsID " + this.session.prsId);
-      // console.log(prsId);
-      // console.log(parseInt(this.session.prsId) === parseInt(prsId));
-
       let result = this.check(this.session &&
          (this.session.isAdmin() || this.session.prsId === prsId),
          Tags.noPermission, null, cb);
 
-      //console.log(result);
-
       return result;
    };
    // Check presence of truthy property in |obj| for all fields in fieldList
-   hasFields(obj: { hasOwnProperty: (arg0: String) => Boolean; }, fieldList: String[], cb: Function) {
+   hasFields(obj: any, fieldList: String[], cb: Function) {
+      //obj: { hasOwnProperty: (arg0: String) => Boolean; }
       var self = this;
 
       fieldList.forEach(function (name: string) {
-         console.log("Is " + name + " Undefined? " + name !== undefined);
-         self.chain(obj.hasOwnProperty(name), Tags.missingField, [name])
-         .chain(name !== undefined, Tags.badValue,[name]);
+         self.chain(obj.hasOwnProperty(name) && obj[name] !== null && obj[name] !== "" &&
+            obj[name] !== undefined, Tags.missingField, [name]);
       });
       return this.check(true, null, null, cb);
    };
+
+   checkFields(obj: any, allowedValues: String[], cb: Function) {
+      var self = this;
+
+      var body = Object.keys(obj);
+      body.forEach(function (element) {
+         self.chain(allowedValues.includes(element), Tags.forbiddenField, [element])
+      });
+      return this.check(true, null, null, cb)
+   }
 }
 // List of errors, and their corresponding resource string tags
- export let Tags = {
+export let Tags = {
    noLogin: "noLogin",              // No active session/login
    noPermission: "noPermission",    // Login lacks permission.
    missingField: "missingField",    // Field missing. Params[0] is field name
@@ -127,6 +128,7 @@ export class Validator {
    oldPwdMismatch: "oldPwdMismatch",            // Password change requires old password
    dupTitle: "dupTitle",            // Title duplicates an existing cnv title
    queryFailed: "queryFailed",
-   forbiddenField: "forbiddenField"
+   forbiddenField: "forbiddenField",
+   noOldPwd: "noOldPwd"
 };
 

@@ -9,11 +9,8 @@ import async from 'async';
 
 router.baseURL = '/Cnvs';
 
-// Need to add ownerID search functionality
-// Return Values ??
 router.get('/', function (req: Request, res: Response) {
    let owner = req.query.owner;
-   console.log(owner);
 
    if (owner) {
       req.cnn.chkQry('select * from Conversation where ownerId = ?', [owner],
@@ -25,9 +22,12 @@ router.get('/', function (req: Request, res: Response) {
    } else {
       req.cnn.chkQry('select * from Conversation', null,
          function (err, cnvs) {
-            if (!err)
-               console.log("Hitting Here");
-            res.json(cnvs);
+            if (!err) {
+               for (var i = 0; i < cnvs.length; i++) {
+                  cnvs[i].lastMessage = Date.parse(cnvs[i].lastMessage);
+               }
+               res.json(cnvs);
+            }
             req.cnn.release();
          });
    }
@@ -53,20 +53,13 @@ router.post('/', function (req: Request, res: Response) {
    var array = Session.getSessionsById();
    var owner = array[array.length - 1];
 
-   console.log(owner.prsId);
-   console.log(body.title);
-   if (body.title !== null && body.title !== undefined) {
-      console.log(body.title.length <= 80);
-   }
-
    async.waterfall([
       function (cb: queryCallback) {
-         if (vld.check((body.title.length <= 80), Tags.badValue, ["title"], cb) &&
-            vld.check((body.title !== "" && body.title !== null && body.title !== undefined), Tags.missingField, ["title"], cb))
+         if (vld.hasFields(body, ["title"], cb) &&
+            vld.check((body.title.length <= 80), Tags.badValue, ["title"], cb))
             cnn.chkQry('select * from Conversation where title = ?', body.title, cb);
       },
       function (existingCnv: Conversation[], fields: any, cb: queryCallback) {
-         console.log(existingCnv[0]);
          if (vld.check(!existingCnv.length, Tags.dupTitle, null, cb))
             cnn.chkQry("insert into Conversation set title = ?, ownerId = ? ",
                [body.title, owner.prsId], cb);
@@ -89,24 +82,20 @@ router.put('/:cnvId', function (req: Request, res: Response) {
    var array = Session.getSessionsById();
    var owner = array[array.length - 1];
 
-   console.log(owner.prsId);
-
    async.waterfall([
       function (cb: queryCallback) {
-         //console.log(ssn.prsId);
-         if (vld.check(body.title.length <= 80, Tags.badValue, ["title"], cb))
+         if (vld.hasFields(body, ["title"], cb) &&
+            vld.check(body.title.length <= 80, Tags.badValue, ["title"], cb))
             cnn.chkQry('select * from Conversation where id = ?', [cnvId], cb);
       },
       function (cnvs: Conversation[], fields: any, cb: queryCallback) {
-         //console.log(cnvs[0]);
-         //console.log("Convo Length = " + cnvs.length);
-         //console.log("Is Person Okay " + vld.checkPrsOK(cnvs[0].ownerId));
+
          if (vld.checkPrsOK(cnvs[0].ownerId, cb) &&
             vld.check(Boolean(cnvs.length), Tags.notFound, null, cb))
             cnn.chkQry('select * from Conversation where title = ?', [body.title], cb);
       },
       function (sameTtl: Conversation[], fields: any, cb: queryCallback) {
-         // console.log("sameTtl.legth = " + sameTtl.length);
+
          if (vld.check(!(sameTtl.length) || ((sameTtl[0].id === parseInt(cnvId)) && (owner.prsId === sameTtl[0].ownerId)),
             Tags.dupTitle, null, cb)) {
             cnn.chkQry("update Conversation set title = ? where id = ?",
@@ -170,10 +159,6 @@ router.get('/:cnvId/Msgs', function (req: Request, res: Response) {
 
    var num = req.query.num || null;
 
-   console.log(cnvId);
-   console.log("YOU ARE IN A GET");
-
-
 
 
    async.waterfall([
@@ -183,35 +168,32 @@ router.get('/:cnvId/Msgs', function (req: Request, res: Response) {
       function (exisitingCnv: Conversation[], fields: any, cb: queryCallback) {
          if (vld.check(Boolean(exisitingCnv.length), Tags.notFound, null, cb)) {
             if (num) {
-               cnn.chkQry(' Select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where M.cnvId = ? ORDER BY M.whenMade LIMIT ?'
+               cnn.chkQry('Select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where M.cnvId = ? ORDER BY M.whenMade, P.id LIMIT ?'
                   , [cnvId, parseInt(num as string)], cb);
             }
             else if (dateTime) {
-               cnn.chkQry('select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where whenMade >=  ? ORDER BY M.whenMade', [checkDate], cb)
+               cnn.chkQry('select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where whenMade >=  ? ORDER BY M.whenMade, P.id',
+                [checkDate], cb)
+            }
+            else {
+               cnn.chkQry(' Select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where M.cnvId = ? ORDER BY M.whenMade, P.id ',
+                [cnvId], cb)
             }
          }
       }],
       function (err: any, result: any) {
          if (!err) {
+            for (var i = 0; i < result.length; i++) {
+               
+               result[i].whenMade = Date.parse(result[i].whenMade);
+           
+
+            }
             res.json(result);
          }
          cnn.release();
       }
    )
-
-   // var handler = function (err, prsArr, fields) {
-   //    res.json(prsArr);
-   //    req.cnn.release();
-   // };
-
-   // if (num) {
-   //    console.log("Made It Here");
-   //    cnn.chkQry(' Select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where cnvId = ? LIMIT ?'
-   //       , [cnvId, parseInt(num)], handler)
-   // } else if (dateTime) {
-   //    console.log("Made it here 2");
-   //    cnn.chkQry('select M.id, P.email, M.content, M.whenMade, M.numLikes From Message M Inner Join Person P ON M.prsId = P.id where whenMade >=  ? ', [checkDate], handler)
-   // }
 });
 
 router.post('/:cnvId/Msgs', function (req: Request, res: Response) {
@@ -220,20 +202,20 @@ router.post('/:cnvId/Msgs', function (req: Request, res: Response) {
    var cnn = req.cnn;
    var body = req.body;
    var time = new Date();
-   console.log("YOU ARE IN A POST");
-
    var array = Session.getSessionsById();
    var owner = array[array.length - 1];
 
    async.waterfall([
       function (cb: queryCallback) {
-         if (vld.check(body.content.length <= 5000, Tags.badValue, ["content"], cb))
+         if (vld.hasFields(body, ["content"], cb)
+            && vld.check(body.content.length <= 5000, Tags.badValue, ["content"], cb)) {
             cnn.chkQry('insert into Message set cnvId = ?, prsId = ?, whenMade = ? , content = ?, numLikes = 0',
                [cnvId, owner.prsId, time, body.content], cb)
+         }
       },
-      function (result: Result, field: any, cb: Function) {
+      function (result: Result, field: any, cb: queryCallback) {
          res.location(router.baseURL + '/' + result.insertId).end();
-         cb(null);
+         cnn.chkQry('update Conversation set lastMessage = ? where id = ?', [time, cnvId], cb);
       }],
       function (err: Error) {
          cnn.release()

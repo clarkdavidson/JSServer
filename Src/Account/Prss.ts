@@ -2,7 +2,7 @@ var Express = require('express');
 import { Request, Response } from 'express'
 import { queryCallback } from 'mysql';
 import { Tags } from '../Validator';
-import async from 'async';
+import async, { any } from 'async';
 import mysql from 'mysql';
 import { Session } from "../Session";
 import { unescapeLeadingUnderscores } from 'typescript';
@@ -29,40 +29,25 @@ interface Result {
 
 //Remove Password from this return value!
 router.get('/', function (req: Request, res: Response) {
-   console.log("Query Email = " + req.query.email);
-   console.log("Session Email = " + req.session.email);
-   console.log("Is Person A Admin " + req.session.isAdmin());
    let email = req.query.email;
-
-   console.log(req.query.email);
-   console.log("First Test = " + req.session.isAdmin() && req.query.email);
-   console.log("Second Test = " + !req.session.isAdmin() && req.query.email);
-
 
    var handler = function (err: Error, prsArr: Person[], fields: any) {
       for (let i = 0; i < prsArr.length; i++) {
          delete prsArr[i].password;
       }
       res.json(prsArr);
-      //Assuming a connection is already there
       req.cnn.release();
    };
 
-   console.log("Value of Email : " + email)
-
    if (email && req.session.isAdmin()) {
-      console.log('1');
-      //Using Handler as a Callback
       email += "%";
       req.cnn.chkQry("select id, email from Person where email LIKE ? ", [email],
          handler);
    }
    else if (req.session.isAdmin() && !email) {
-      console.log('2');
       req.cnn.chkQry('select id, email from Person', null, handler);
    }
    else if (!req.session.isAdmin() && (req.session.email.includes(email as string) || !email)) {
-      console.log('3');
       req.cnn.chkQry('select id,email from Person where email = ?', [req.session.email], handler);
    } else if (!req.session.isAdmin() && !req.session.email.includes(email as string)) {
       req.cnn.chkQry('select id, email from Person where email = null', null, handler);
@@ -71,39 +56,41 @@ router.get('/', function (req: Request, res: Response) {
 });
 
 router.post('/', function (req: Request, res: Response) {
-   var vld = req.validator;  // Shorthands
-   var body = req.body; // Request Body
-   var admin = req.session && req.session.isAdmin(); //Check for Admin
-   var cnn = req.cnn; // Connection From Connection Pool
+   var vld = req.validator; 
+   var body = req.body; 
+   var admin = req.session && req.session.isAdmin();
+   var cnn = req.cnn;
 
    if (admin && !body.password)
-      body.password = "*";                       // Blocking password
-   body.whenRegistered = new Date();
+      body.password = "*";                      
+   if (!body.firstName)
+      body.firstName = "";
+
 
    async.waterfall([
-      function (cb: queryCallback) { // Check properties and search for Email duplicates
+      function (cb: queryCallback) {
          if (vld.hasFields(body, ["email", "password", "role", "lastName"], cb) &&
-            vld.check(body.role !== null, Tags.missingField, ['role'], cb) &&
+            vld.checkFields(body, ["email", "firstName", "lastName", "password", "role", "termsAccepted"], cb) &&
             vld.chain(body.role === 0 || admin, Tags.forbiddenRole, null)
-               .chain(body.termsAccepted || admin, Tags.noTerms, null)
+               .chain((body.termsAccepted && body.termsAccepted === true) || admin, Tags.noTerms, null)
                .chain(body.password || admin, Tags.missingField, ['password'])
                .chain(body.email, Tags.missingField, ['email'])
-               .chain(body.firstName && body.firstName.length <= 30, Tags.badValue, ['firstName'])
-               .chain((body.email !== null && body.email !== undefined) && body.email.length <= 150, Tags.badValue, ['email'])
-               .chain(body.lastName  && body.lastName.length <= 50, Tags.badValue, ['lastName'])
-               .chain((body.password !== null && body.password !== undefined) && body.password.length <= 50, Tags.badValue, ['password'])
+               .chain(body.firstName.length <= 30, Tags.badValue, ['firstName'])
+               .chain(body.email.length <= 150, Tags.badValue, ['email'])
+               .chain(body.lastName.length <= 50, Tags.badValue, ['lastName'])
+               .chain(body.password.length <= 50, Tags.badValue, ['password'])
                .check(body.role >= 0, Tags.badValue, ["role"], cb)) {
             cnn.chkQry('select * from Person where email = ?', body.email, cb)
          }
       },
-      function (existingPrss: Person[], fields: any, cb: queryCallback) {  // If no duplicates, insert new Person
-         if (vld.check(!existingPrss.length, Tags.dupEmail, null, cb) &&
-            vld.check(body.role !== null || body.role !== "", Tags.missingField, ["role"], cb)) {
+      function (existingPrss: Person[], fields: any, cb: queryCallback) { 
+         if (vld.check(!existingPrss.length, Tags.dupEmail, null, cb)) {
+            body.whenRegistered = new Date();
             body.termsAccepted = body.termsAccepted && new Date();
             cnn.chkQry('insert into Person set ?', body, cb);
          }
       },
-      function (result: Result, fields: any, cb: Function) { // Return location of inserted Person
+      function (result: Result, fields: any, cb: Function) { 
          res.location(router.baseURL + '/' + result.insertId).end();
          cb();
       }],
@@ -112,8 +99,6 @@ router.post('/', function (req: Request, res: Response) {
       });
 });
 
-
-/* Fill in this version */
 router.put('/:id', function (req: Request, res: Response) {
    var vld = req.validator;
    var body = req.body;
@@ -124,22 +109,23 @@ router.put('/:id', function (req: Request, res: Response) {
    async.waterfall([
       function (cb: queryCallback) {
          if (vld.checkPrsOK(parseInt(req.params.id), cb) &&
+            vld.checkFields(body, ["firstName", "lastName", "password", "role", "oldPassword"], cb) &&
             vld.chain(!("whenRegistered" in body), Tags.forbiddenField, ["whenRegistered"])
                .chain(!("termsAccepted" in body), Tags.forbiddenField, ["termsAccepted"])
-               .chain(!("role" in body) || body.role === 0 || admin, Tags.badValue, ["role"])
+               .chain((!("role" in body) || body.role === 0) || admin, Tags.badValue, ["role"])
                .chain(!("password" in body) || (body.password !== null && body.password !== undefined &&
-                   body.password !== "") && body.password.length <= 50, Tags.badValue, ["password"])
-               .chain(admin || !body.password || body.oldPassword, Tags.forbiddenRole, ['role'])
+                  body.password !== "") && body.password.length <= 50, Tags.badValue, ["password"])
                .chain(!("lastName" in body) || (body.lastName !== null && body.lastName !== undefined &&
-                   body.lastName !== "") && body.lastName.length <= 50, Tags.badValue, ["lastName"])
+                  body.lastName !== "") && body.lastName.length <= 50, Tags.badValue, ["lastName"])
                .chain(!("email" in body), Tags.badValue, ["email"])
-               .check(!("firstName" in body) ||(body.firstName !== null && body.firstName !== undefined)
-                && body.firstName.length <= 30,
+               .check(!("firstName" in body) || (body.firstName !== null && body.firstName !== undefined)
+                  && body.firstName.length <= 30,
                   Tags.badValue, ["firstName"], cb))
             cnn.chkQry('select * from Person where id = ?', [req.params.id], cb);
       },
       (prss: Person[], fields: any, cb: queryCallback) => {
          if (vld.check(Boolean(prss.length), Tags.notFound, null, cb) &&
+            vld.check((body.password && body.oldPassword) || !body.password || admin, Tags.noOldPwd, null, cb) &&
             vld.check(admin || body.oldPassword === prss[0].password || !body.password, Tags.oldPwdMismatch, ["pwdMismatch"], cb)) {
             delete body.id;
             delete body.oldPassword;
@@ -147,7 +133,6 @@ router.put('/:id', function (req: Request, res: Response) {
                cnn.chkQry('update Person set ? where id = ?', [req.body, req.params.id], cb);
             }
             else {
-               console.log('try again');
                cb(null, null, null);
             }
          }
@@ -158,13 +143,11 @@ router.put('/:id', function (req: Request, res: Response) {
          cb();
       }],
       function (err: Error) {
-         console.log('You Ended up here');
          cnn.release();
       });
 
 });
 
-//Remove Password from PrsArr
 
 router.get('/:id', function (req: Request, res: Response) {
    var vld = req.validator;
@@ -177,9 +160,7 @@ router.get('/:id', function (req: Request, res: Response) {
       },
       function (prsArr: Person[], fields: any, cb: Function) {
          if (vld.check(Boolean(prsArr.length), Tags.notFound, null, cb)) {
-            console.log(prsArr[0].password);
             delete prsArr[0].password;
-            console.log(prsArr[0].password);
             res.json(prsArr);
             cb();
          }
@@ -189,54 +170,29 @@ router.get('/:id', function (req: Request, res: Response) {
       });
 });
 
-/*
-router.get('/:id', function(req, res) {
-   var vld = req.validator;
-
-   if (vld.checkPrsOK(req.params.id)) {
-      req.cnn.query('select * from Person where id = ?', [req.params.id],
-      function(err, prsArr) {
-         if (vld.check(prsArr.length, Tags.notFound))
-            res.json(prsArr);
-         req.cnn.release();
-      });
-   }
-   else {
-      req.cnn.release();
-   }
-});
-*/
-
-
-//________________________________//
-//  Connection Not being Released \\
 router.delete('/:id', function (req: Request, res: Response) {
    var vld = req.validator;
    var userId = req.params.id;
-   console.log(userId);
-
-   Session.deletedUser(userId);
-
    async.waterfall([
       function (cb: queryCallback) {
          if (vld.checkAdmin(cb)) {
-            //console.log("Admin Check Cleared");
-            //console.log(vld.checkAdmin());
-            req.cnn.chkQry('DELETE from Person where id = ?', [req.params.id], cb);
+            Session.deletedUser(userId);
+            req.cnn.chkQry('Select * from Person where id = ?', [req.params.id], cb)
          }
       },
-      function (result: Result, fields: any, cb: Function) {
-         if (vld.check(Boolean(result.affectedRows), Tags.notFound, null, cb)) {
-            //console.log("Person Deleted");
-            res.end();
-            cb();
+      function (result: any, fields: any, cb: queryCallback) {
+         if (vld.check(result.length, Tags.notFound, null, cb)) {
+            req.cnn.chkQry(' Update Message set numLikes = numLikes - 1 where id IN(Select msgId from Likes where prsId = ?);', [req.params.id], cb)
          }
-      }],
-      function (err: Error) {
-         console.log('Connection Released');
+      },
+      function (result: any, fields: any, cb: queryCallback) {
+         req.cnn.chkQry('Delete from Person where id = ?', [req.params.id], cb)
+         res.end();
+      }
+   ],
+      function (err) {
          req.cnn.release();
       });
 });
-
 module.exports = router;
 

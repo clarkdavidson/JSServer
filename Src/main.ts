@@ -91,11 +91,9 @@ app.delete('/DB', function (req: Request, res: Response) {
       cbs.push((cb: Function) => {
          Session.getAllIds().forEach((id: string) => {
             Session.findById(id).logOut();
-            console.log("Clearing " + id);
          });
          var test = Session.getSessionsById();
          test.length = 0;
-         console.log(test.length);
          cb();
       });
 

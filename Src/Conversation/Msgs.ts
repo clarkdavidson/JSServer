@@ -40,8 +40,7 @@ router.get('/:msgId', function (req: Request, res: Response) {
 
     async.waterfall([
         function (cb: queryCallback) {
-            cnn.chkQry(" Select M.whenMade,P.email,M.content From Message M Inner Join Person P ON M.prsId = P.Id where M.id = ?;", [msgId], cb);
-            console.log('Sql Statment Done');
+            cnn.chkQry(" Select M.whenMade,P.email,M.content, M.numLikes From Message M Inner Join Person P ON M.prsId = P.Id where M.id = ?;", [msgId], cb);
         },
         function (msgArr: Message[], fields: any, cb: Function) {
             if (vld.check(Boolean(msgArr.length), Tags.notFound, null, cb)) {
@@ -51,7 +50,6 @@ router.get('/:msgId', function (req: Request, res: Response) {
             }
         }],
         function (err: Error) {
-            console.log("Connection Is Released");
             req.cnn.release();
         });
 });
@@ -72,7 +70,6 @@ router.post('/:msgId/Likes', function (req: Request, res: Response) {
             if (vld.check(Boolean(existingMsg.length), Tags.notFound, null, cb)) {
                 cnn.chkQry("select * from Likes where msgId = ? && prsId = ?", [msgId, owner.prsId], cb)
             }
-            console.log("Second Statement Done");
         },
         function (existingLike: Like[], field: any, cb: queryCallback) {
             if (vld.check(!existingLike.length, null, null, cb)) {
@@ -103,10 +100,10 @@ router.get('/:msgId/Likes', function (req: Request, res: Response) {
     }
 
     if (num) {
-        req.cnn.chkQry("Select L.id, P.firstName, P.lastName from Likes L Inner Join Person P ON L.prsId = P.id where msgId = ? ORDER BY P.lastName Limit ?",
+        cnn.chkQry(" Select L.id, P.firstName, P.lastName from Likes L Inner Join Person P ON L.prsId = P.id where msgId = ? ORDER BY L.id DESC, P.lastName LIMIT 1",
             [msgId, num], handler);
     } else {
-        req.cnn.chkQry("Select L.id, P.firstName, P.lastName from Likes L Inner Join Person P ON L.prsId = P.id where msgId = ? ORDER BY P.lastName",
+        cnn.chkQry("Select L.id, P.firstName, P.lastName from Likes L Inner Join Person P ON L.prsId = P.id where msgId = ? ORDER BY P.lastName",
             [msgId, num], handler)
     };
 })

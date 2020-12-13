@@ -50,36 +50,35 @@ class Validator {
     }
     ;
     checkAdmin(cb) {
-        console.log('Checking for Admin');
-        console.log(this.session.isAdmin());
-        console.log(this.session);
         return this.check(this.session && this.session.isAdmin(), exports.Tags.noPermission, null, cb);
     }
     ;
     // Validate that AU is the specified person or is an admin
     checkPrsOK(prsId, cb) {
-        // console.log(this.session);
-        // console.log("Is user a Admin? " + this.session.isAdmin());
-        // console.log("User PrsID " + this.session.prsId);
-        // console.log(prsId);
-        // console.log(parseInt(this.session.prsId) === parseInt(prsId));
         let result = this.check(this.session &&
             (this.session.isAdmin() || this.session.prsId === prsId), exports.Tags.noPermission, null, cb);
-        //console.log(result);
         return result;
     }
     ;
     // Check presence of truthy property in |obj| for all fields in fieldList
     hasFields(obj, fieldList, cb) {
+        //obj: { hasOwnProperty: (arg0: String) => Boolean; }
         var self = this;
         fieldList.forEach(function (name) {
-            console.log(name === null);
-            self.chain(obj.hasOwnProperty(name), exports.Tags.missingField, [name])
-                .chain(name !== undefined && name !== null, exports.Tags.badValue, [name]);
+            self.chain(obj.hasOwnProperty(name) && obj[name] !== null && obj[name] !== "" &&
+                obj[name] !== undefined, exports.Tags.missingField, [name]);
         });
         return this.check(true, null, null, cb);
     }
     ;
+    checkFields(obj, allowedValues, cb) {
+        var self = this;
+        var body = Object.keys(obj);
+        body.forEach(function (element) {
+            self.chain(allowedValues.includes(element), exports.Tags.forbiddenField, [element]);
+        });
+        return this.check(true, null, null, cb);
+    }
 }
 exports.Validator = Validator;
 // List of errors, and their corresponding resource string tags
@@ -96,5 +95,6 @@ exports.Tags = {
     oldPwdMismatch: "oldPwdMismatch",
     dupTitle: "dupTitle",
     queryFailed: "queryFailed",
-    forbiddenField: "forbiddenField"
+    forbiddenField: "forbiddenField",
+    noOldPwd: "noOldPwd"
 };
